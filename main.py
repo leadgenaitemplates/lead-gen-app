@@ -29,30 +29,33 @@ async def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Evergreen Lead Gen Templates</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                darkMode: 'class',
-                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
-            }
-        </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }
-            .glass { background: rgba(30,41,59,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+            body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+            .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; padding: 2.5rem; max-width: 28rem; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+            .gradient-text { background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         </style>
     </head>
-    <body class="min-h-screen flex items-center justify-center p-6 text-gray-100">
-        <div class="glass rounded-2xl p-10 max-w-lg w-full shadow-2xl border border-gray-700/50">
-            <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+    <body>
+        <div class="glass">
+            <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 gradient-text">
                 Evergreen Lead Gen
             </h1>
             <p class="text-center text-gray-300 mb-8 text-lg">
-                Self-updating agents on top of Apollo, Lusha, ZoomInfo & more. Weekly refresh + one-click enrichment.  
-                $149 one-time or $19/mo. Optional $12/run.
+                Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
+                $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>
             <form action="/create-checkout" method="post" class="space-y-6">
-                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
+                <input 
+                    name="industry" 
+                    placeholder="Your niche (e.g. SaaS Austin)" 
+                    required 
+                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                >
+                <button 
+                    type="submit" 
+                    class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]"
+                >
                     Pay $149 with Stripe & Generate Leads
                 </button>
             </form>
@@ -70,14 +73,21 @@ async def create_checkout(industry: str = Form(...)):
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{"price_data": {"currency": "usd", "product_data": {"name": f"Lead Gen - {industry}"}, "unit_amount": 14900}, "quantity": 1}],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"Lead Gen Template - {industry}"},
+                    "unit_amount": 14900,
+                },
+                "quantity": 1,
+            }],
             mode="payment",
             success_url="https://lead-gen-app-production-d067.up.railway.app/success?industry=" + industry,
             cancel_url="https://lead-gen-app-production-d067.up.railway.app/",
         )
         return RedirectResponse(session.url, status_code=303)
     except Exception as e:
-        raise HTTPException(500, str(e))
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/success")
 async def success(industry: str):
@@ -95,7 +105,7 @@ async def generate(request: Request, industry: str = Form(None)):
             "rlusd_address": PAY_TO_RLUSD,
             "rlusd_tag": PAY_TO_RLUSD_TAG,
             "usdc_sol_address": PAY_TO_USDC_SOL,
-            "message": "message": "Pay $149 one-time with RLUSD/XRP (x402) or USDC on Solana for basic access. For $19/mo subscription (weekly auto-updates + priority support), send $19 monthly to the same address + tag. Use Destination Tag if needed. Then retry with X-Payment-Proof header containing tx hash."
+            "message": "Pay $149 one-time with RLUSD/XRP (x402) or USDC on Solana for basic access. For $19/mo subscription (weekly auto-updates + priority support), send $19 monthly to the same address + tag. Use Destination Tag if needed. Then retry with X-Payment-Proof header containing tx hash."
         })
 
     try:

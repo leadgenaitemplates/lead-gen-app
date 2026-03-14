@@ -95,7 +95,7 @@ async def generate(request: Request, industry: str = Form(None)):
             "rlusd_address": PAY_TO_RLUSD,
             "rlusd_tag": PAY_TO_RLUSD_TAG,
             "usdc_sol_address": PAY_TO_USDC_SOL,
-            "message": "Pay $149 with RLUSD/XRP (x402) or USDC on Solana. Use Destination Tag if needed. Then retry with X-Payment-Proof header."
+            "message": "message": "Pay $149 one-time with RLUSD/XRP (x402) or USDC on Solana for basic access. For $19/mo subscription (weekly auto-updates + priority support), send $19 monthly to the same address + tag. Use Destination Tag if needed. Then retry with X-Payment-Proof header containing tx hash."
         })
 
     try:

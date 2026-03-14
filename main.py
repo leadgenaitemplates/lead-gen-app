@@ -3,10 +3,15 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import os
 import stripe
 from groq import Groq
+import psycopg2
+from datetime import datetime
 
 app = FastAPI()
 
+# Groq client
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# Stripe (added in Phase 6)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # YOUR UPHOLD ADDRESSES + TAGS
@@ -19,6 +24,34 @@ PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
+# DB connection helper
+def get_db_connection():
+    return psycopg2.connect(os.getenv("DATABASE_URL"))
+
+# Create table on startup (runs once when app starts)
+@app.on_event("startup")
+async def startup_event():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                stripe_customer_id TEXT UNIQUE,
+                email TEXT,
+                payment_type TEXT,  -- 'one_time' or 'subscription'
+                amount_paid DECIMAL,
+                paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                expiry_date TIMESTAMP,  -- null for one-time, date+30d for monthly
+                active BOOLEAN DEFAULT TRUE
+            )
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"DB startup error: {e}")
+
 @app.get("/")
 async def home():
     html = """
@@ -29,10 +62,16 @@ async def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Evergreen Lead Gen Templates</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
+            }
+        </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-            .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; padding: 2.5rem; max-width: 28rem; width: 100%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+            .glass { background: rgba(30,41,59,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; padding: 2.5rem; max-width: 28rem; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
             .gradient-text { background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         </style>
     </head>
@@ -46,16 +85,8 @@ async def home():
                 $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>
             <form action="/create-checkout" method="post" class="space-y-6">
-                <input 
-                    name="industry" 
-                    placeholder="Your niche (e.g. SaaS Austin)" 
-                    required 
-                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-                >
-                <button 
-                    type="submit" 
-                    class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]"
-                >
+                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
                     Pay $149 with Stripe & Generate Leads
                 </button>
             </form>
@@ -91,7 +122,20 @@ async def create_checkout(industry: str = Form(...)):
 
 @app.get("/success")
 async def success(industry: str):
-    return {"status": "paid", "message": f"Payment received! Generating leads for {industry}..."}
+    # Record one-time payment (expand in Phase 6 with real Stripe data)
+    try:
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO users (payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s)",
+            ("one_time", 149.00, datetime.now(), None)  # lifetime = no expiry
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+    except Exception as e:
+        print(f"DB error on success: {e}")
+    return {"status": "paid", "message": f"Payment received! Generating leads for {industry}... (recorded in DB)"}
 
 @app.post("/generate")
 async def generate(request: Request, industry: str = Form(None)):

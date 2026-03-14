@@ -6,13 +6,10 @@ from groq import Groq
 
 app = FastAPI()
 
-# Groq (brain)
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# Stripe (added in Phase 6)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# YOUR REAL UPHOLD ADDRESSES + TAGS
+# YOUR UPHOLD ADDRESSES + TAGS
 PAY_TO_XRPL = "rwJqGeY3WfmMYm9gBfNVqn3T6nurrpwGv2"
 PAY_TO_XRPL_TAG = 1986572456
 PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpufbtqoVCvZ4JBAw2AzQwNz8A"
@@ -25,13 +22,46 @@ DEFAULT_MODEL = "llama-3.1-8b-instant"
 @app.get("/")
 async def home():
     html = """
-    <h1>🚀 Evergreen Lead Gen Agent Template</h1>
-    <p>$149 one-time or $19/month. Pay easily with Stripe or use x402 for agents.</p>
-    <form action="/create-checkout" method="post">
-        <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required style="padding:10px; width:300px;">
-        <button type="submit" style="padding:10px 20px;">Pay $149 with Stripe & Generate Leads</button>
-    </form>
-    <p><small>Agents: Use the API endpoint with x402 payment proof.</small></p>
+    <!DOCTYPE html>
+    <html lang="en" class="dark">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Evergreen Lead Gen Templates</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
+            }
+        </script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }
+            .glass { background: rgba(30,41,59,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        </style>
+    </head>
+    <body class="min-h-screen flex items-center justify-center p-6 text-gray-100">
+        <div class="glass rounded-2xl p-10 max-w-lg w-full shadow-2xl border border-gray-700/50">
+            <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                Evergreen Lead Gen
+            </h1>
+            <p class="text-center text-gray-300 mb-8 text-lg">
+                Self-updating agents on top of Apollo, Lusha, ZoomInfo & more. Weekly refresh + one-click enrichment.  
+                $149 one-time or $19/mo. Optional $12/run.
+            </p>
+            <form action="/create-checkout" method="post" class="space-y-6">
+                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
+                    Pay $149 with Stripe & Generate Leads
+                </button>
+            </form>
+            <p class="text-center mt-8 text-sm text-gray-400">
+                Agents? Use x402 for autonomous payments (RLUSD/XRP or USDC/SOL).
+            </p>
+        </div>
+    </body>
+    </html>
     """
     return HTMLResponse(content=html)
 
@@ -40,21 +70,14 @@ async def create_checkout(industry: str = Form(...)):
     try:
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {"name": f"Lead Gen Template - {industry}"},
-                    "unit_amount": 14900,
-                },
-                "quantity": 1,
-            }],
+            line_items=[{"price_data": {"currency": "usd", "product_data": {"name": f"Lead Gen - {industry}"}, "unit_amount": 14900}, "quantity": 1}],
             mode="payment",
             success_url="https://lead-gen-app-production-d067.up.railway.app/success?industry=" + industry,
             cancel_url="https://lead-gen-app-production-d067.up.railway.app/",
         )
         return RedirectResponse(session.url, status_code=303)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(500, str(e))
 
 @app.get("/success")
 async def success(industry: str):
@@ -72,7 +95,7 @@ async def generate(request: Request, industry: str = Form(None)):
             "rlusd_address": PAY_TO_RLUSD,
             "rlusd_tag": PAY_TO_RLUSD_TAG,
             "usdc_sol_address": PAY_TO_USDC_SOL,
-            "message": "Pay $149 with RLUSD/XRP (x402) or USDC on Solana. Use the Destination Tag if needed. Then retry with X-Payment-Proof header."
+            "message": "Pay $149 with RLUSD/XRP (x402) or USDC on Solana. Use Destination Tag if needed. Then retry with X-Payment-Proof header."
         })
 
     try:

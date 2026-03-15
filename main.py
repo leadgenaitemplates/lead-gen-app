@@ -4,14 +4,12 @@ import os
 import stripe
 from groq import Groq
 import psycopg2
-from datetime import datetime
+from datetime import datetime, timedelta
+import uuid
 
 app = FastAPI()
 
-# Groq client
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# Stripe (added in Phase 6)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # YOUR UPHOLD ADDRESSES + TAGS
@@ -24,11 +22,11 @@ PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# DB connection helper
+# DB connection
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# Create table on startup (runs once when app starts)
+# Create table on startup
 @app.on_event("startup")
 async def startup_event():
     try:
@@ -37,8 +35,8 @@ async def startup_event():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
-                stripe_customer_id TEXT UNIQUE,
-                email TEXT,
+                email TEXT UNIQUE NOT NULL,
+                access_key TEXT UNIQUE NOT NULL,
                 payment_type TEXT,  -- 'one_time' or 'subscription'
                 amount_paid DECIMAL,
                 paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -60,14 +58,8 @@ async def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Evergreen Lead Gen Templates</title>
+        <title>Lead Gen Evergreen</title>
         <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                darkMode: 'class',
-                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
-            }
-        </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
@@ -78,16 +70,17 @@ async def home():
     <body>
         <div class="glass">
             <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 gradient-text">
-                Evergreen Lead Gen
+                Lead Gen Evergreen
             </h1>
             <p class="text-center text-gray-300 mb-8 text-lg">
                 Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
                 $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>
             <form action="/create-checkout" method="post" class="space-y-6">
+                <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
                 <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
                 <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
-                    Pay $149 with Stripe & Generate Leads
+                    Pay $149 with Stripe & Get Access
                 </button>
             </form>
             <p class="text-center mt-8 text-sm text-gray-400">
@@ -100,45 +93,47 @@ async def home():
     return HTMLResponse(content=html)
 
 @app.post("/create-checkout")
-async def create_checkout(industry: str = Form(...)):
+async def create_checkout(email: str = Form(...), industry: str = Form(...)):
+    # TODO: In Phase 6, validate email and create real Stripe session
+    # For now, simulate payment success and generate key
+    access_key = str(uuid.uuid4())
     try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {"name": f"Lead Gen Template - {industry}"},
-                    "unit_amount": 14900,
-                },
-                "quantity": 1,
-            }],
-            mode="payment",
-            success_url="https://lead-gen-app-production-d067.up.railway.app/success?industry=" + industry,
-            cancel_url="https://lead-gen-app-production-d067.up.railway.app/",
-        )
-        return RedirectResponse(session.url, status_code=303)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/success")
-async def success(industry: str):
-    # Record one-time payment (expand in Phase 6 with real Stripe data)
-    try:
-        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
+        conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO users (payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s)",
-            ("one_time", 149.00, datetime.now(), None)  # lifetime = no expiry
+            "INSERT INTO users (email, access_key, payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s, %s, %s)",
+            (email, access_key, "one_time", 149.00, datetime.now(), None)  # lifetime
         )
         conn.commit()
         cur.close()
         conn.close()
     except Exception as e:
-        print(f"DB error on success: {e}")
-    return {"status": "paid", "message": f"Payment received! Generating leads for {industry}... (recorded in DB)"}
+        return JSONResponse(status_code=500, content={"error": f"DB error: {str(e)}"})
+    
+    return {"status": "paid", "access_key": access_key, "message": f"Payment received! Your access key: {access_key}. Save this! Use ?key={access_key} on /generate."}
 
 @app.post("/generate")
 async def generate(request: Request, industry: str = Form(None)):
+    key = request.query_params.get("key") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not key:
+        return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY or Authorization: Bearer YOUR_KEY"})
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT active, expiry_date FROM users WHERE access_key = %s", (key,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if not result:
+            return JSONResponse(status_code=403, content={"error": "Invalid access key"})
+        active, expiry = result
+        if not active or (expiry and expiry < datetime.now()):
+            return JSONResponse(status_code=403, content={"error": "Access expired or inactive. Renew subscription."})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"DB error: {str(e)}"})
+
     proof = request.headers.get("X-Payment-Proof")
     if not proof:
         return JSONResponse(status_code=402, content={

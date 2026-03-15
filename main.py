@@ -9,7 +9,10 @@ import uuid
 
 app = FastAPI()
 
+# Groq client
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+# Stripe (added in Phase 6)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # YOUR UPHOLD ADDRESSES + TAGS
@@ -22,28 +25,45 @@ PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# DB connection
+# DB connection helper
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# Create table on startup
+# Create table on startup (safe, adds missing columns)
 @app.on_event("startup")
 async def startup_event():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Create table if missing
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 email TEXT UNIQUE NOT NULL,
                 access_key TEXT UNIQUE NOT NULL,
-                payment_type TEXT,  -- 'one_time' or 'subscription'
+                payment_type TEXT,
                 amount_paid DECIMAL,
                 paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                expiry_date TIMESTAMP,  -- null for one-time, date+30d for monthly
+                expiry_date TIMESTAMP,
                 active BOOLEAN DEFAULT TRUE
             )
         """)
+        
+        # Add missing columns safely
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
+        except:
+            pass
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -60,6 +80,12 @@ async def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Lead Gen Evergreen</title>
         <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+            tailwind.config = {
+                darkMode: 'class',
+                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
+            }
+        </script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         <style>
             body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }

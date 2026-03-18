@@ -12,7 +12,7 @@ app = FastAPI()
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# YOUR x402 ADDRESSES + TAGS (Master Plan baseline)
+# x402 addresses from Master Plan
 PAY_TO_XRPL = "twJqGeY3wfmMYm9gBfNVqn3T6nuxrpwGv2"
 PAY_TO_XRPL_TAG = 1986572456
 PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpuEbtqoVCvZ43BAw2AzQWNz8A"
@@ -148,7 +148,7 @@ async def success(session_id: str = None):
 @app.get("/agent-pay")
 async def agent_pay():
     return JSONResponse(content={
-        "message": "Agents: Pay with x402 (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly, then retry /generate with X-Payment-Proof header.",
+        "message": "Agents: Use x402 autonomous payments (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly, then retry with X-Payment-Proof header.",
         "xrpl_address": PAY_TO_XRPL, "xrpl_tag": PAY_TO_XRPL_TAG,
         "solana_address": PAY_TO_SOLANA,
         "rlusd_address": PAY_TO_RLUSD, "rlusd_tag": PAY_TO_RLUSD_TAG,
@@ -159,10 +159,9 @@ async def agent_pay():
 @app.get("/generate")
 async def generate(request: Request, industry: str = Query(None), key: str = Query(None)):
     if not key:
-        key = request.query_params.get("key") or request.headers.get("Authorization", "").replace("Bearer ", "")
-    if not key:
         return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY"})
     
+    # Stripe user check FIRST (bypass x402 proof)
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -170,24 +169,29 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
         result = cur.fetchone()
         cur.close()
         conn.close()
-        if not result or not result[0] or (result[1] and result[1] < datetime.now()):
-            return JSONResponse(status_code=403, content={"error": "Invalid or expired key"})
+        
+        if result and result[0] and (not result[1] or result[1] >= datetime.now()):
+            # Valid Stripe key → generate leads immediately (no proof needed)
+            pass
+        else:
+            # Invalid/expired key → fall back to x402 agent path
+            proof = request.headers.get("X-Payment-Proof")
+            if not proof:
+                return JSONResponse(status_code=402, content={
+                    "error": "Payment Required (x402 path)",
+                    "xrpl_address": PAY_TO_XRPL,
+                    "xrpl_tag": PAY_TO_XRPL_TAG,
+                    "solana_address": PAY_TO_SOLANA,
+                    "rlusd_address": PAY_TO_RLUSD,
+                    "rlusd_tag": PAY_TO_RLUSD_TAG,
+                    "usdc_sol_address": PAY_TO_USDC_SOL,
+                    "message": "Pay via x402 then retry with X-Payment-Proof header."
+                })
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
     
     if not industry:
         return JSONResponse(status_code=400, content={"error": "Add &industry=Your Niche to the URL"})
-    
-    proof = request.headers.get("X-Payment-Proof")
-    if not proof:
-        return JSONResponse(status_code=402, content={
-            "error": "Payment Required (x402 path)",
-            "xrpl_address": PAY_TO_XRPL, "xrpl_tag": PAY_TO_XRPL_TAG,
-            "solana_address": PAY_TO_SOLANA,
-            "rlusd_address": PAY_TO_RLUSD, "rlusd_tag": PAY_TO_RLUSD_TAG,
-            "usdc_sol_address": PAY_TO_USDC_SOL,
-            "message": "Pay via x402 then retry with X-Payment-Proof header."
-        })
     
     try:
         response = GROQ_CLIENT.chat.completions.create(

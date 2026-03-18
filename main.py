@@ -9,10 +9,7 @@ import uuid
 
 app = FastAPI()
 
-# Groq client
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-# Stripe (added in Phase 6)
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 # YOUR UPHOLD ADDRESSES + TAGS
@@ -25,18 +22,16 @@ PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# DB connection helper
+# DB connection
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# Create table on startup (safe, adds missing columns)
+# Create table on startup (safe)
 @app.on_event("startup")
 async def startup_event():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Create table if missing
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -49,21 +44,6 @@ async def startup_event():
                 active BOOLEAN DEFAULT TRUE
             )
         """)
-        
-        # Add missing columns safely
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
-        except:
-            pass
-        
         conn.commit()
         cur.close()
         conn.close()
@@ -83,14 +63,53 @@ async def home():
         <script>
             tailwind.config = {
                 darkMode: 'class',
-                theme: { extend: { colors: { primary: '#3b82f6', darkbg: '#0f172a', cardbg: 'rgba(30,41,59,0.8)' } } }
+                theme: {
+                    extend: {
+                        colors: {
+                            primary: '#3b82f6',
+                            indigo: '#6366f1',
+                            darkbg: '#0f172a',
+                            darkbg2: '#1e293b',
+                            cardbg: 'rgba(30,41,59,0.7)',
+                            borderlight: 'rgba(255,255,255,0.1)'
+                        }
+                    }
+                }
             }
         </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
-            body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
-            .glass { background: rgba(30,41,59,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; padding: 2.5rem; max-width: 32rem; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
-            .gradient-text { background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: linear-gradient(to bottom right, #0f172a, #1e293b);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 1.5rem;
+                margin: 0;
+            }
+            .glass {
+                background: rgba(30,41,59,0.7);
+                backdrop-filter: blur(16px);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 1.5rem;
+                padding: 3rem 2.5rem;
+                max-width: 32rem;
+                width: 100%;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            }
+            .gradient-text {
+                background: linear-gradient(to right, #60a5fa, #a78bfa);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .btn-gradient {
+                background: linear-gradient(to right, #3b82f6, #6366f1);
+            }
+            .btn-gradient:hover {
+                background: linear-gradient(to right, #2563eb, #4f46e5);
+            }
         </style>
     </head>
     <body>
@@ -98,14 +117,28 @@ async def home():
             <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 gradient-text">
                 Lead Gen Evergreen
             </h1>
-            <p class="text-center text-gray-300 mb-8 text-lg">
+            <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
                 Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
                 $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>
             <form action="/create-checkout" method="post" class="space-y-6">
-                <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
+                <input 
+                    name="email" 
+                    type="email" 
+                    placeholder="Your email (required for access key)" 
+                    required 
+                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition"
+                >
+                <input 
+                    name="industry" 
+                    placeholder="Your niche (e.g. SaaS Austin)" 
+                    required 
+                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition"
+                >
+                <button 
+                    type="submit" 
+                    class="w-full btn-gradient text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]"
+                >
                     Pay $149 with Stripe & Get Access
                 </button>
             </form>
@@ -120,15 +153,13 @@ async def home():
 
 @app.post("/create-checkout")
 async def create_checkout(email: str = Form(...), industry: str = Form(...)):
-    # TODO: In Phase 6, validate email and create real Stripe session
-    # For now, simulate payment success and generate key
     access_key = str(uuid.uuid4())
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO users (email, access_key, payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s, %s, %s)",
-            (email, access_key, "one_time", 149.00, datetime.now(), None)  # lifetime
+            (email, access_key, "one_time", 149.00, datetime.now(), None)
         )
         conn.commit()
         cur.close()

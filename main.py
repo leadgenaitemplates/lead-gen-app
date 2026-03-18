@@ -4,7 +4,7 @@ import os
 import stripe
 from groq import Groq
 import psycopg2
-from datetime import datetime, timedelta
+from datetime import datetime
 import uuid
 
 app = FastAPI()
@@ -12,14 +12,13 @@ app = FastAPI()
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# YOUR UPHOLD ADDRESSES + TAGS
-PAY_TO_XRPL = "rwJqGeY3WfmMYm9gBfNVqn3T6nurrpwGv2"
+# YOUR UPHOLD / x402 ADDRESSES + TAGS (kept exactly from Master Plan)
+PAY_TO_XRPL = "twJqGeY3wfmMYm9gBfNVqn3T6nuxrpwGv2"
 PAY_TO_XRPL_TAG = 1986572456
-PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpufbtqoVCvZ4JBAw2AzQwNz8A"
-PAY_TO_RLUSD = "rMdG3ju8pgyVh29ELPWaDuA74CpWW6Fxns"
+PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpuEbtqoVCvZ43BAw2AzQWNz8A"
+PAY_TO_RLUSD = "rMdG3ju8pgyVh29ELPWaDUA74CpWW6Fxns"
 PAY_TO_RLUSD_TAG = 142654817
-PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
-
+PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4KxkH6vHzoBJw5"
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
 # DB connection helper
@@ -32,7 +31,6 @@ async def startup_event():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        
         # Create table if missing
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -46,21 +44,13 @@ async def startup_event():
                 active BOOLEAN DEFAULT TRUE
             )
         """)
-        
         # Add missing columns safely
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
-        except:
-            pass
-        
+        try: cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
+        except: pass
+        try: cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
+        except: pass
+        try: cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
+        except: pass
         conn.commit()
         cur.close()
         conn.close()
@@ -70,109 +60,89 @@ async def startup_event():
 @app.get("/")
 async def home():
     html = """
-    <!DOCTYPE html>
-    <html lang="en" class="dark">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Evergreen Lead Gen</title>
-        <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-            tailwind.config = {
-                darkMode: 'class',
-                theme: {
-                    extend: {
-                        colors: {
-                            primary: '#3b82f6',
-                            indigo: '#6366f1',
-                            slate900: '#0f172a',
-                            slate800: '#1e293b',
-                            cardbg: 'rgba(30,41,59,0.7)',
-                            borderlight: 'rgba(255,255,255,0.1)'
-                        }
-                    }
-                }
-            }
-        </script>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-        <style>
-            body {
-                font-family: 'Inter', sans-serif;
-                background: linear-gradient(to bottom right, #0f172a, #1e293b);
-                min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 2rem 1rem;
-                margin: 0;
-            }
-            .glass {
-                background: rgba(30,41,59,0.7);
-                backdrop-filter: blur(16px);
-                border: 1px solid rgba(255,255,255,0.1);
-                border-radius: 1.5rem;
-                padding: 3.5rem 2.5rem;
-                max-width: 36rem;
-                width: 100%;
-                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-            }
-            .gradient-text {
-                background: linear-gradient(to right, #60a5fa, #a78bfa);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-            }
-            .btn-gradient {
-                background: linear-gradient(to right, #3b82f6, #6366f1);
-            }
-            .btn-gradient:hover {
-                background: linear-gradient(to right, #2563eb, #4f46e5);
-            }
-            h1 {
-                font-size: 3.75rem;
-                line-height: 1;
-                margin-bottom: 1.5rem;
-                word-wrap: break-word;
-            }
-            @media (min-width: 768px) {
-                h1 {
-                    font-size: 5rem;
-                }
-            }
-            p {
-                font-size: 1.125rem;
-                line-height: 1.75;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="glass">
-            <h1 class="font-bold text-center gradient-text">
-                Evergreen Lead Gen
-            </h1>
-            <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
-                Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
-                $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
-            </p>
-            <form action="/create-checkout" method="post" class="space-y-6">
-                <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
-                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
-                <button type="submit" class="w-full btn-gradient text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
-                    Pay $149 with Stripe & Get Access
-                </button>
-            </form>
-            <p class="text-center mt-8 text-sm text-gray-400">
-                Agents? Use x402 for autonomous payments (RLUSD/XRP or USDC/SOL).
-            </p>
-        </div>
-    </body>
-    </html>
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evergreen Lead Gen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', indigo: '#6366f1', slate900: '#0f172a', slate800: '#1e293b', cardbg: 'rgba(30,41,59,0.7)', borderlight: 'rgba(255,255,255,0.1)' } } } }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; margin: 0; }
+  .glass { background: rgba(30,41,59,0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 1.5rem; padding: 3.5rem 2.5rem; max-width: 36rem; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+  .gradient-text { background: linear-gradient(to right, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .btn-gradient { background: linear-gradient(to right, #3b82f6, #6366f1); }
+  .btn-gradient:hover { background: linear-gradient(to right, #2563eb, #4f46e5); }
+  h1 { font-size: 3.75rem; line-height: 1; margin-bottom: 1.5rem; }
+  @media (min-width: 768px) { h1 { font-size: 5rem; } }
+</style>
+</head>
+<body>
+<div class="glass">
+  <h1 class="font-bold text-center gradient-text">Evergreen Lead Gen</h1>
+  <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
+    Self-updating agents for Apollo, Lusha, ZoomInfo & more.<br>
+    $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
+  </p>
+  <form action="/create-checkout" method="post" class="space-y-6">
+    <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition">
+    <input name="industry" type="text" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition">
+    <button type="submit" class="w-full btn-gradient text-white font-semibold py-4 rounded-2xl text-lg transition transform hover:scale-[1.02]">Pay $149 with Stripe & Get Access</button>
+  </form>
+  <p class="text-center mt-8 text-sm text-gray-400">
+    Humans: Use Stripe above.<br>
+    <strong>Agents:</strong> Use x402 for autonomous payments (RLUSD/XRP or USDC/SOL) → 
+    <a href="/agent-pay" class="text-indigo-400 hover:underline">see payment details here</a>. 
+    Built for autonomous lead-gen on Apollo, Lusha, ZoomInfo, Clay, etc.
+  </p>
+</div>
+</body>
+</html>
     """
     return HTMLResponse(content=html)
 
+# REAL STRIPE CHECKOUT (humans)
 @app.post("/create-checkout")
 async def create_checkout(email: str = Form(...), industry: str = Form(...)):
-    access_key = str(uuid.uuid4())
     try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {'name': 'Evergreen Lead Gen Lifetime Access'},
+                    'unit_amount': 14900,
+                },
+                'quantity': 1,
+            }],
+            mode='payment',
+            success_url=f"{os.getenv('BASE_URL')}/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{os.getenv('BASE_URL')}",
+            customer_email=email,
+            metadata={"industry": industry}
+        )
+        return RedirectResponse(url=checkout_session.url, status_code=303)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+# SUCCESS PAGE (issues access key + agent upsell)
+@app.get("/success")
+async def success(session_id: str = None):
+    if not session_id:
+        return HTMLResponse("<h1>Error: No session ID</h1>")
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.payment_status != "paid":
+            return HTMLResponse("<h1>Payment not completed</h1>")
+        
+        email = session.customer_email
+        industry = session.metadata.get("industry", "your niche")
+        access_key = str(uuid.uuid4())
+        
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
@@ -182,17 +152,43 @@ async def create_checkout(email: str = Form(...), industry: str = Form(...)):
         conn.commit()
         cur.close()
         conn.close()
+        
+        return HTMLResponse(f"""
+        <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
+        <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
+        <p>Your access key: <strong>{access_key}</strong></p>
+        <p>Save this! Use it at <a href="{os.getenv('BASE_URL')}/generate?key={access_key}">/generate?key={access_key}</a></p>
+        <p>Now generate leads for: <strong>{industry}</strong></p>
+        <p class="text-center mt-8 text-sm text-gray-400">
+          Humans: You now have lifetime access.<br>
+          <strong>Agents / Owners:</strong> Want weekly auto-updates + priority support? Send $19 monthly via x402 to the same addresses and reply with your tx hash — we’ll upgrade you automatically.
+        </p>
+        </body></html>
+        """)
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": f"DB error: {str(e)}"})
-    
-    return {"status": "paid", "access_key": access_key, "message": f"Payment received! Your access key: {access_key}. Save this! Use ?key={access_key} on /generate."}
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
+# AGENT-FRIENDLY x402 PATH
+@app.get("/agent-pay")
+async def agent_pay():
+    return JSONResponse(content={
+        "message": "Agents: Use x402 autonomous payments (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly recurring to the addresses below, then retry /generate with X-Payment-Proof header containing the tx hash.",
+        "xrpl_address": PAY_TO_XRPL,
+        "xrpl_tag": PAY_TO_XRPL_TAG,
+        "solana_address": PAY_TO_SOLANA,
+        "rlusd_address": PAY_TO_RLUSD,
+        "rlusd_tag": PAY_TO_RLUSD_TAG,
+        "usdc_sol_address": PAY_TO_USDC_SOL,
+        "note": "This endpoint is built for autonomous agents — no browser required. Weekly auto-updates run Sundays for subscribers."
+    })
+
+# GENERATE (original from plan — works for both Stripe keys and x402)
 @app.post("/generate")
 async def generate(request: Request, industry: str = Form(None)):
     key = request.query_params.get("key") or request.headers.get("Authorization", "").replace("Bearer ", "")
     if not key:
         return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY or Authorization: Bearer YOUR_KEY"})
-
+    
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -200,7 +196,7 @@ async def generate(request: Request, industry: str = Form(None)):
         result = cur.fetchone()
         cur.close()
         conn.close()
-
+        
         if not result:
             return JSONResponse(status_code=403, content={"error": "Invalid access key"})
         active, expiry = result
@@ -208,7 +204,7 @@ async def generate(request: Request, industry: str = Form(None)):
             return JSONResponse(status_code=403, content={"error": "Access expired or inactive. Renew subscription."})
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"DB error: {str(e)}"})
-
+    
     proof = request.headers.get("X-Payment-Proof")
     if not proof:
         return JSONResponse(status_code=402, content={
@@ -221,11 +217,11 @@ async def generate(request: Request, industry: str = Form(None)):
             "usdc_sol_address": PAY_TO_USDC_SOL,
             "message": "Pay $149 one-time with RLUSD/XRP (x402) or USDC on Solana for basic access. For $19/mo subscription (weekly auto-updates + priority support), send $19 monthly to the same address + tag. Use Destination Tag if needed. Then retry with X-Payment-Proof header containing tx hash."
         })
-
+    
     try:
         response = GROQ_CLIENT.chat.completions.create(
             model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": f"Generate 50 high-quality leads for {industry} business. Output as CSV with columns: Company,Website,LinkedIn,Location."}],
+            messages=[{"role": "user", "content": f"Generate 50 high-quality leads for {industry} business. Output as CSV with columns: Company, Website, LinkedIn, Location."}],
             temperature=0.7
         )
         leads = response.choices[0].message.content

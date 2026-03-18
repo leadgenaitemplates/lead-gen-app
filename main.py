@@ -22,16 +22,18 @@ PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4kxkH6vHzoBJw5"
 
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# DB connection
+# DB connection helper
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# Create table on startup (safe)
+# Create table on startup (safe, adds missing columns)
 @app.on_event("startup")
 async def startup_event():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Create table if missing
         cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -44,6 +46,21 @@ async def startup_event():
                 active BOOLEAN DEFAULT TRUE
             )
         """)
+        
+        # Add missing columns safely
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
+        except:
+            pass
+        try:
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
+        except:
+            pass
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -58,7 +75,7 @@ async def home():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Lead Gen Evergreen</title>
+        <title>Evergreen Lead Gen</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <script>
             tailwind.config = {
@@ -86,7 +103,7 @@ async def home():
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 1.5rem;
+                padding: 2rem 1rem;
                 margin: 0;
             }
             .glass {
@@ -95,7 +112,7 @@ async def home():
                 border: 1px solid rgba(255,255,255,0.1);
                 border-radius: 1.5rem;
                 padding: 3rem 2.5rem;
-                max-width: 32rem;
+                max-width: 36rem;
                 width: 100%;
                 box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             }
@@ -110,35 +127,31 @@ async def home():
             .btn-gradient:hover {
                 background: linear-gradient(to right, #2563eb, #4f46e5);
             }
+            h1 {
+                font-size: 3rem;
+                line-height: 1.1;
+                margin-bottom: 1.5rem;
+            }
+            @media (min-width: 768px) {
+                h1 {
+                    font-size: 4.5rem;
+                }
+            }
         </style>
     </head>
     <body>
         <div class="glass">
-            <h1 class="text-4xl md:text-5xl font-bold text-center mb-6 gradient-text">
-                Lead Gen Evergreen
+            <h1 class="font-bold text-center gradient-text">
+                Evergreen Lead Gen
             </h1>
             <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
                 Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
                 $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>
             <form action="/create-checkout" method="post" class="space-y-6">
-                <input 
-                    name="email" 
-                    type="email" 
-                    placeholder="Your email (required for access key)" 
-                    required 
-                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition"
-                >
-                <input 
-                    name="industry" 
-                    placeholder="Your niche (e.g. SaaS Austin)" 
-                    required 
-                    class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition"
-                >
-                <button 
-                    type="submit" 
-                    class="w-full btn-gradient text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]"
-                >
+                <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
+                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
+                <button type="submit" class="w-full btn-gradient text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
                     Pay $149 with Stripe & Get Access
                 </button>
             </form>

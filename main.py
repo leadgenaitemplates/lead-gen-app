@@ -85,10 +85,12 @@ async def home():
                         colors: {
                             primary: '#3b82f6',
                             indigo: '#6366f1',
-                            darkbg: '#0f172a',
-                            darkbg2: '#1e293b',
-                            cardbg: 'rgba(30,41,59,0.7)',
-                            borderlight: 'rgba(255,255,255,0.1)'
+                            slate: {
+                                900: '#0f172a',
+                                800: '#1e293b',
+                            },
+                            cardbg: 'rgba(30, 41, 59, 0.7)',
+                            borderlight: 'rgba(255, 255, 255, 0.1)'
                         }
                     }
                 }
@@ -107,14 +109,14 @@ async def home():
                 margin: 0;
             }
             .glass {
-                background: rgba(30,41,59,0.7);
+                background: rgba(30, 41, 59, 0.7);
                 backdrop-filter: blur(16px);
-                border: 1px solid rgba(255,255,255,0.1);
+                border: 1px solid rgba(255, 255, 255, 0.1);
                 border-radius: 1.5rem;
                 padding: 3.5rem 2.5rem;
                 max-width: 36rem;
                 width: 100%;
-                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
             }
             .gradient-text {
                 background: linear-gradient(to right, #60a5fa, #a78bfa);
@@ -128,8 +130,8 @@ async def home():
                 background: linear-gradient(to right, #2563eb, #4f46e5);
             }
             h1 {
-                font-size: 3.5rem;
-                line-height: 1.1;
+                font-size: 3.75rem;
+                line-height: 1;
                 margin-bottom: 1.5rem;
                 word-wrap: break-word;
             }
@@ -138,6 +140,10 @@ async def home():
                     font-size: 5rem;
                 }
             }
+            p {
+                font-size: 1.125rem;
+                line-height: 1.75;
+            }
         </style>
     </head>
     <body>
@@ -145,7 +151,7 @@ async def home():
             <h1 class="font-bold text-center gradient-text">
                 Evergreen Lead Gen
             </h1>
-            <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
+            <p class="text-center text-gray-300 mb-8">
                 Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
                 $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
             </p>

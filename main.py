@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, HTTPException
+from fastapi import FastAPI, Request, Form, HTTPException, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import os
 import stripe
@@ -12,7 +12,7 @@ app = FastAPI()
 GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# YOUR PAYMENT ADDRESSES + TAGS (from Master Plan)
+# YOUR x402 ADDRESSES + TAGS (Master Plan baseline)
 PAY_TO_XRPL = "twJqGeY3wfmMYm9gBfNVqn3T6nuxrpwGv2"
 PAY_TO_XRPL_TAG = 1986572456
 PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpuEbtqoVCvZ43BAw2AzQWNz8A"
@@ -21,11 +21,9 @@ PAY_TO_RLUSD_TAG = 142654817
 PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4KxkH6vHzoBJw5"
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# DB connection helper
 def get_db_connection():
     return psycopg2.connect(os.getenv("DATABASE_URL"))
 
-# Create table on startup (safe, adds missing columns if needed)
 @app.on_event("startup")
 async def startup_event():
     try:
@@ -43,19 +41,9 @@ async def startup_event():
                 active BOOLEAN DEFAULT TRUE
             )
         """)
-        # Add missing columns safely
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS access_key TEXT UNIQUE")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS expiry_date TIMESTAMP")
-        except:
-            pass
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
-        except:
-            pass
+        for col in ["access_key TEXT UNIQUE", "expiry_date TIMESTAMP", "active BOOLEAN DEFAULT TRUE"]:
+            try: cur.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col}")
+            except: pass
         conn.commit()
         cur.close()
         conn.close()
@@ -73,21 +61,7 @@ async def home():
 <title>Evergreen Lead Gen</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
-  tailwind.config = {
-    darkMode: 'class',
-    theme: {
-      extend: {
-        colors: {
-          primary: '#3b82f6',
-          indigo: '#6366f1',
-          slate900: '#0f172a',
-          slate800: '#1e293b',
-          cardbg: 'rgba(30,41,59,0.7)',
-          borderlight: 'rgba(255,255,255,0.1)'
-        }
-      }
-    }
-  }
+  tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#3b82f6', indigo: '#6366f1', slate900: '#0f172a', slate800: '#1e293b', cardbg: 'rgba(30,41,59,0.7)', borderlight: 'rgba(255,255,255,0.1)' } } } }
 </script>
 <style>
   body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; margin: 0; }
@@ -105,15 +79,13 @@ async def home():
     $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
   </p>
   <form action="/create-checkout" method="post" class="space-y-6">
-    <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition">
+    <input name="email" type="email" placeholder="Your email" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition">
     <input name="industry" type="text" placeholder="Your niche (e.g. Plumbing companies Seattle WA)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition">
     <button type="submit" class="w-full btn-gradient text-white font-semibold py-4 rounded-2xl text-lg transition transform hover:scale-[1.02]">Pay $149 with Stripe & Get Access</button>
   </form>
   <p class="text-center mt-8 text-sm text-gray-400">
     Humans: Use Stripe above.<br>
-    <strong>Agents:</strong> Use x402 for autonomous payments (RLUSD/XRP or USDC/SOL) → 
-    <a href="/agent-pay" class="text-indigo-400 hover:underline">see payment details here</a>.<br>
-    Built for autonomous lead-gen workflows on Apollo, Lusha, ZoomInfo, Clay, etc.
+    <strong>Agents:</strong> Use x402 for autonomous payments → <a href="/agent-pay" class="text-indigo-400 hover:underline">see details here</a>.
   </p>
 </div>
 </body>
@@ -126,17 +98,10 @@ async def create_checkout(email: str = Form(...), industry: str = Form(...)):
     try:
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {'name': 'Evergreen Lead Gen Lifetime Access'},
-                    'unit_amount': 14900,  # $149.00
-                },
-                'quantity': 1,
-            }],
+            line_items=[{'price_data': {'currency': 'usd', 'product_data': {'name': 'Evergreen Lead Gen Lifetime Access'}, 'unit_amount': 14900}, 'quantity': 1}],
             mode='payment',
             success_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/success?session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}",
+            cancel_url=os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app'),
             customer_email=email,
             metadata={"industry": industry}
         )
@@ -146,12 +111,10 @@ async def create_checkout(email: str = Form(...), industry: str = Form(...)):
 
 @app.get("/success")
 async def success(session_id: str = None):
-    if not session_id:
-        return HTMLResponse("<h1>Error: No session ID</h1><p>Please try again or contact support.</p>")
+    if not session_id: return HTMLResponse("<h1>Error: No session ID</h1>")
     try:
         session = stripe.checkout.Session.retrieve(session_id)
-        if session.payment_status != "paid":
-            return HTMLResponse("<h1>Payment not completed</h1>")
+        if session.payment_status != "paid": return HTMLResponse("<h1>Payment not completed</h1>")
         
         email = session.customer_email
         industry = session.metadata.get("industry", "your niche")
@@ -159,15 +122,12 @@ async def success(session_id: str = None):
         
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO users (email, access_key, payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s, %s, %s)",
-            (email, access_key, "one_time", 149.00, datetime.now(), None)
-        )
+        cur.execute("INSERT INTO users (email, access_key, payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (email, access_key, "one_time", 149.00, datetime.now(), None))
         conn.commit()
         cur.close()
         conn.close()
         
-        # Use env var with fallback to your exact live URL
         base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
         
         return HTMLResponse(f"""
@@ -175,11 +135,10 @@ async def success(session_id: str = None):
         <html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
         <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
         <p>Your access key: <strong>{access_key}</strong></p>
-        <p>Save this key securely! Use it here: <a href="{base_url}/generate?key={access_key}" style="color:#60a5fa;">{base_url}/generate?key={access_key}</a></p>
-        <p>Now generate leads for: <strong>{industry}</strong></p>
+        <p>Click here to generate leads now: <a href="{base_url}/generate?key={access_key}&industry={industry}" style="color:#60a5fa;">{base_url}/generate?key={access_key}&industry={industry}</a></p>
         <p class="mt-8 text-sm text-gray-400">
-          Humans: You now have lifetime basic access.<br>
-          <strong>Agents / Owners:</strong> Want weekly auto-updates + priority support? Send $19 monthly via x402 to the same addresses and include your tx hash in a reply or DM — we'll upgrade you automatically.
+          Humans: Lifetime access granted.<br>
+          <strong>Agents:</strong> Want $19/mo weekly auto-updates? Use x402 to the same addresses.
         </p>
         </body></html>
         """)
@@ -189,21 +148,20 @@ async def success(session_id: str = None):
 @app.get("/agent-pay")
 async def agent_pay():
     return JSONResponse(content={
-        "message": "Agents: Use x402 autonomous payments (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly recurring to the addresses below, then retry /generate with X-Payment-Proof header containing the tx hash.",
-        "xrpl_address": PAY_TO_XRPL,
-        "xrpl_tag": PAY_TO_XRPL_TAG,
+        "message": "Agents: Pay with x402 (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly, then retry /generate with X-Payment-Proof header.",
+        "xrpl_address": PAY_TO_XRPL, "xrpl_tag": PAY_TO_XRPL_TAG,
         "solana_address": PAY_TO_SOLANA,
-        "rlusd_address": PAY_TO_RLUSD,
-        "rlusd_tag": PAY_TO_RLUSD_TAG,
+        "rlusd_address": PAY_TO_RLUSD, "rlusd_tag": PAY_TO_RLUSD_TAG,
         "usdc_sol_address": PAY_TO_USDC_SOL,
-        "note": "Endpoint designed for autonomous agents — no browser needed. Weekly auto-updates run Sundays for subscribers."
+        "note": "Built for autonomous agents — perfect for the agentic AI economy."
     })
 
-@app.post("/generate")
-async def generate(request: Request, industry: str = Form(None)):
-    key = request.query_params.get("key") or request.headers.get("Authorization", "").replace("Bearer ", "")
+@app.get("/generate")
+async def generate(request: Request, industry: str = Query(None), key: str = Query(None)):
     if not key:
-        return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY or Authorization: Bearer YOUR_KEY"})
+        key = request.query_params.get("key") or request.headers.get("Authorization", "").replace("Bearer ", "")
+    if not key:
+        return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY"})
     
     try:
         conn = get_db_connection()
@@ -212,26 +170,23 @@ async def generate(request: Request, industry: str = Form(None)):
         result = cur.fetchone()
         cur.close()
         conn.close()
-        
-        if not result:
-            return JSONResponse(status_code=403, content={"error": "Invalid access key"})
-        active, expiry = result
-        if not active or (expiry and expiry < datetime.now()):
-            return JSONResponse(status_code=403, content={"error": "Access expired or inactive. Renew subscription."})
+        if not result or not result[0] or (result[1] and result[1] < datetime.now()):
+            return JSONResponse(status_code=403, content={"error": "Invalid or expired key"})
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": f"DB error: {str(e)}"})
+        return JSONResponse(status_code=500, content={"error": str(e)})
+    
+    if not industry:
+        return JSONResponse(status_code=400, content={"error": "Add &industry=Your Niche to the URL"})
     
     proof = request.headers.get("X-Payment-Proof")
     if not proof:
         return JSONResponse(status_code=402, content={
-            "error": "Payment Required for x402 path",
-            "xrpl_address": PAY_TO_XRPL,
-            "xrpl_tag": PAY_TO_XRPL_TAG,
+            "error": "Payment Required (x402 path)",
+            "xrpl_address": PAY_TO_XRPL, "xrpl_tag": PAY_TO_XRPL_TAG,
             "solana_address": PAY_TO_SOLANA,
-            "rlusd_address": PAY_TO_RLUSD,
-            "rlusd_tag": PAY_TO_RLUSD_TAG,
+            "rlusd_address": PAY_TO_RLUSD, "rlusd_tag": PAY_TO_RLUSD_TAG,
             "usdc_sol_address": PAY_TO_USDC_SOL,
-            "message": "Pay $149 one-time with RLUSD/XRP (x402) or USDC on Solana for basic access. For $19/mo (weekly auto-updates + priority support), send $19 monthly. Then retry with X-Payment-Proof header (tx hash)."
+            "message": "Pay via x402 then retry with X-Payment-Proof header."
         })
     
     try:

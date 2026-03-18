@@ -100,70 +100,192 @@ async def home():
                 font-family: 'Inter', sans-serif;
                 background: linear-gradient(to bottom right, #0f172a, #1e293b);
                 min-height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 2rem 1rem;
                 margin: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
             }
-            .glass {
-                background: rgba(30,41,59,0.7);
-                backdrop-filter: blur(16px);
-                border: 1px solid rgba(255,255,255,0.1);
-                border-radius: 1.5rem;
-                padding: 3.5rem 2.5rem;
-                max-width: 36rem;
+            .hero {
+                text-align: center;
+                padding: 8rem 2rem 6rem;
+                background: linear-gradient(to bottom right, #0f172a, #1e293b);
                 width: 100%;
-                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            }
+            .container {
+                width: 100%;
+                max-width: 1200px;
+                padding: 0 1.5rem;
             }
             .gradient-text {
                 background: linear-gradient(to right, #60a5fa, #a78bfa);
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
-            }
-            .btn-gradient {
-                background: linear-gradient(to right, #3b82f6, #6366f1);
-            }
-            .btn-gradient:hover {
-                background: linear-gradient(to right, #2563eb, #4f46e5);
-            }
-            h1 {
-                font-size: 3.75rem;
+                font-size: 7rem;
                 line-height: 1;
+                font-weight: 700;
                 margin-bottom: 1.5rem;
                 word-wrap: break-word;
             }
-            @media (min-width: 768px) {
-                h1 {
-                    font-size: 5rem;
+            @media (max-width: 768px) {
+                .gradient-text {
+                    font-size: 4.5rem;
                 }
             }
-            p {
-                font-size: 1.125rem;
+            .subheadline {
+                font-size: 1.25rem;
                 line-height: 1.75;
+                color: #d1d5db;
+                margin-bottom: 2.5rem;
+                max-width: 48rem;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .cta-button {
+                background: linear-gradient(to right, #3b82f6, #6366f1);
+                color: white;
+                font-weight: 600;
+                padding: 1.25rem 3rem;
+                border-radius: 0.75rem;
+                font-size: 1.25rem;
+                transition: all 0.3s ease;
+                box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            }
+            .cta-button:hover {
+                background: linear-gradient(to right, #2563eb, #4f46e5);
+                transform: translateY(-3px);
+                box-shadow: 0 20px 25px -5px rgba(0,0,0,0.4);
+            }
+            .glass-card {
+                background: rgba(30,41,59,0.7);
+                backdrop-filter: blur(16px);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 1.5rem;
+                padding: 3rem;
+                margin: 3rem 1rem;
+                max-width: 48rem;
+                width: 100%;
+                box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            }
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+                gap: 2rem;
+                margin: 4rem 0;
+            }
+            .feature-item {
+                background: rgba(30,41,59,0.5);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 1rem;
+                padding: 2rem;
+                text-align: center;
+            }
+            .pricing-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+                gap: 2rem;
+                margin: 4rem 0;
+            }
+            .pricing-card {
+                background: rgba(30,41,59,0.7);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 1.5rem;
+                padding: 2.5rem;
+                text-align: center;
+                box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            }
+            .price {
+                font-size: 3.5rem;
+                font-weight: 700;
+                margin: 1rem 0;
+                color: #60a5fa;
+            }
+            footer {
+                text-align: center;
+                padding: 4rem 1rem 2rem;
+                color: #9ca3af;
+                font-size: 0.875rem;
+                border-top: 1px solid rgba(255,255,255,0.1);
             }
         </style>
     </head>
     <body>
-        <div class="glass">
-            <h1 class="font-bold text-center gradient-text">
-                Evergreen Lead Gen
-            </h1>
-            <p class="text-center text-gray-300 mb-8 text-lg leading-relaxed">
-                Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
-                $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
-            </p>
-            <form action="/create-checkout" method="post" class="space-y-6">
-                <input name="email" type="email" placeholder="Your email (required for access key)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
-                <input name="industry" placeholder="Your niche (e.g. SaaS Austin)" required class="w-full px-5 py-4 bg-gray-800/70 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary transition" />
-                <button type="submit" class="w-full btn-gradient text-white font-semibold py-4 px-6 rounded-xl transition duration-300 shadow-lg transform hover:scale-[1.02]">
-                    Pay $149 with Stripe & Get Access
-                </button>
-            </form>
-            <p class="text-center mt-8 text-sm text-gray-400">
-                Agents? Use x402 for autonomous payments (RLUSD/XRP or USDC/SOL).
-            </p>
-        </div>
+        <header class="hero">
+            <div class="container">
+                <h1 class="gradient-text">Evergreen Lead Gen</h1>
+                <p class="subheadline">
+                    Self-updating agents for Apollo, Lusha, ZoomInfo & more.  
+                    $149 one-time for basic access or $19/mo for weekly auto-updates + priority support.
+                </p>
+                <a href="https://lead-gen-app-production-d067.up.railway.app/" class="cta-button">
+                    Generate Leads Now
+                </a>
+                <p class="mt-6 text-gray-400 text-sm">
+                    Works with Apollo, Lusha, ZoomInfo, Cognism, Clay, RocketReach & more. Stripe easy-pay or x402 for agents.
+                </p>
+            </div>
+        </header>
+
+        <main class="container">
+            <section class="glass-card">
+                <h2 class="text-3xl font-bold text-center mb-6 gradient-text">How It Works</h2>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <h3 class="text-xl font-semibold mb-4">Step 1</h3>
+                        <p>Type your niche (e.g. SaaS Austin)</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3 class="text-xl font-semibold mb-4">Step 2</h3>
+                        <p>Connect your Apollo, Lusha, ZoomInfo, Cognism, Clay or RocketReach key (free) or pay $12 for enrichment</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3 class="text-xl font-semibold mb-4">Step 3</h3>
+                        <p>Get fresh CSV with 50+ leads (Company, Website, LinkedIn, Location)</p>
+                    </div>
+                    <div class="feature-item">
+                        <h3 class="text-xl font-semibold mb-4">Step 4</h3>
+                        <p>$19/mo unlocks weekly auto-updates so it never breaks + priority support</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="glass-card">
+                <h2 class="text-3xl font-bold text-center mb-6 gradient-text">Pricing</h2>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <h3 class="text-2xl font-bold mb-4">One-Time</h3>
+                        <div class="price">$149</div>
+                        <ul class="text-left text-gray-300 space-y-3 mb-6">
+                            <li>Lifetime access</li>
+                            <li>Unlimited runs</li>
+                            <li>Basic template (no weekly updates)</li>
+                            <li>Works on top of your existing Apollo, Lusha, ZoomInfo, Cognism, Clay, RocketReach keys</li>
+                        </ul>
+                        <a href="https://lead-gen-app-production-d067.up.railway.app/" class="btn-gradient text-white font-semibold py-3 px-6 rounded-lg inline-block transition duration-300 hover:scale-[1.02]">
+                            Choose Plan
+                        </a>
+                    </div>
+                    <div class="pricing-card">
+                        <h3 class="text-2xl font-bold mb-4">Subscription</h3>
+                        <div class="price">$19<span class="text-base">/month</span></div>
+                        <ul class="text-left text-gray-300 space-y-3 mb-6">
+                            <li>Everything in One-Time</li>
+                            <li>Weekly auto-updates</li>
+                            <li>Priority support</li>
+                            <li>Early access to new templates</li>
+                            <li>Works on top of your existing Apollo, Lusha, ZoomInfo, Cognism, Clay, RocketReach keys</li>
+                        </ul>
+                        <a href="https://lead-gen-app-production-d067.up.railway.app/" class="btn-gradient text-white font-semibold py-3 px-6 rounded-lg inline-block transition duration-300 hover:scale-[1.02]">
+                            Choose Plan
+                        </a>
+                    </div>
+                </div>
+                <p class="text-center text-gray-400 mt-6">Optional Enrichment Run – $12 each</p>
+            </section>
+        </main>
+
+        <footer>
+            <p>We only provide automation templates. Use your own Apollo, Lusha, ZoomInfo, Cognism, Clay, RocketReach keys. We do not store or process personal data. Follow GDPR/CCPA rules yourself. Not for spam or illegal use. Questions? DM @theryancameron on X or email support@evergreenleadgen.ai.</p>
+        </footer>
     </body>
     </html>
     """

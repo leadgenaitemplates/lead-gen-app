@@ -130,14 +130,13 @@ async def success(session_id: str = None):
                 <h1 style="color:#60a5fa;">Welcome to Evergreen Lead Gen!</h1>
                 <p>Thank you for your purchase. Here is everything you need:</p>
                 <p><strong>Access Key:</strong> <code style="background:#1e293b;padding:4px 8px;border-radius:4px;">{access_key}</code></p>
-                <p><a href="{generate_link}" style="background:#3b82f6;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;">Click here to generate your leads now</a></p>
-                <p><strong>Pro tip:</strong> The page will show a preview table + one-click CSV download + copy button.</p>
+                <p><a href="{generate_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Click here to generate your leads now</a></p>
+                <p style="margin-top:25px;"><a href="{base_url}" style="color:#60a5fa;font-weight:bold;">Run a new search anytime →</a></p>
                 <hr style="border-color:#334155;margin:30px 0;">
                 <p style="color:#94a3b8;font-size:14px;">
                     Humans: You now have lifetime access.<br>
-                    <strong>Agents:</strong> Want weekly auto-updates + priority support? Send $19 monthly via x402 to the same addresses and we’ll upgrade you automatically.
+                    <strong>Agents:</strong> Want weekly auto-updates + priority support? Send $19 monthly via x402 and we’ll upgrade you automatically.
                 </p>
-                <p style="color:#64748b;font-size:12px;">Questions? Reply to this email or DM @theryancameron on X.</p>
             </div>
             """
         })
@@ -146,8 +145,13 @@ async def success(session_id: str = None):
         <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
         <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
         <p>Your access key: <strong>{access_key}</strong></p>
-        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the branded receipt + direct link.</p>
-        <p>Or click here: <a href="{generate_link}" style="color:#60a5fa;">Generate Leads Now</a></p>
+        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt + direct link.</p>
+        
+        <p style="margin:30px 0;">
+            <a href="{generate_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:18px;">Run New Search Now</a>
+        </p>
+        
+        <p style="margin-top:20px;"><a href="{base_url}" style="color:#60a5fa;">Or return to homepage to run even more searches</a></p>
         </body></html>
         """)
     except Exception as e:
@@ -217,12 +221,12 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
 <pre class="text-sm text-gray-300 whitespace-pre-wrap">{leads}</pre>
 </div>
 <div class="flex gap-4 justify-center">
-<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" 
-class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
-<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" 
-class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
+<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
+<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
 </div>
-<p class="text-center mt-10 text-gray-400 text-sm">Weekly auto-updates available with $19/mo subscription (x402). Questions? DM @theryancameron</p>
+<p class="text-center mt-8 text-sm text-gray-400">
+    <a href="{base_url}" style="color:#60a5fa;">Run a new search anytime →</a>
+</p>
 </div>
 </body>
 </html>

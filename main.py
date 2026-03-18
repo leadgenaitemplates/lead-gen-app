@@ -111,7 +111,7 @@ async def home():
                 backdrop-filter: blur(16px);
                 border: 1px solid rgba(255,255,255,0.1);
                 border-radius: 1.5rem;
-                padding: 3rem 2.5rem;
+                padding: 3.5rem 2.5rem;
                 max-width: 36rem;
                 width: 100%;
                 box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
@@ -128,13 +128,14 @@ async def home():
                 background: linear-gradient(to right, #2563eb, #4f46e5);
             }
             h1 {
-                font-size: 3rem;
+                font-size: 3.5rem;
                 line-height: 1.1;
                 margin-bottom: 1.5rem;
+                word-wrap: break-word;
             }
             @media (min-width: 768px) {
                 h1 {
-                    font-size: 4.5rem;
+                    font-size: 5rem;
                 }
             }
         </style>

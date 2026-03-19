@@ -146,7 +146,7 @@ async def success(session_id: str = None):
         <p>Your access key: <strong>{access_key}</strong></p>
         <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt.</p>
         <p style="margin:40px 0;">
-            <a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:18px 36px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:19px;">Go to My Dashboard → Run Searches</a>
+            <a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:18px 36px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:19px;">Go to My Dashboard → Run Unlimited Searches</a>
         </p>
         </body></html>
         """)
@@ -185,8 +185,9 @@ async def dashboard(key: str = Query(None)):
 <body class="min-h-screen text-white p-8">
 <div class="max-w-2xl mx-auto bg-slate-900/70 backdrop-blur rounded-3xl p-10">
 <h1 class="text-4xl font-bold gradient-text text-center mb-6">My Dashboard</h1>
-<p class="text-center text-gray-400 mb-8">Welcome back! Run as many searches as you want.</p>
-<form action="/generate?key={key}" method="get" class="space-y-6">
+<p class="text-center text-gray-400 mb-8">Welcome back! Run unlimited searches anytime.</p>
+<form action="/generate" method="get" class="space-y-6">
+<input type="hidden" name="key" value="{key}">
 <input name="industry" type="text" placeholder="Enter new niche (e.g. SaaS companies in Austin)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
 <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Generate 50 Leads Now</button>
 </form>
@@ -196,8 +197,6 @@ async def dashboard(key: str = Query(None)):
 </html>
     """
     return HTMLResponse(content=html)
-
-# (The rest of the file — /agent-pay, /generate with beautiful leads page, /health — stays exactly the same as your last working version. I kept it short here to avoid repetition, but you can keep your previous /generate block exactly as it was.)
 
 @app.get("/agent-pay")
 async def agent_pay():

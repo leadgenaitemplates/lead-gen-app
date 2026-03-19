@@ -118,9 +118,9 @@ async def success(session_id: str = None):
         conn.close()
 
         base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
-        generate_link = f"{base_url}/generate?key={access_key}&industry={urllib.parse.quote(industry)}"
+        dashboard_link = f"{base_url}/dashboard?key={access_key}"
 
-        # BRANDED EMAIL (clean)
+        # BRANDED EMAIL
         resend.Emails.send({
             "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
             "to": email,
@@ -130,8 +130,7 @@ async def success(session_id: str = None):
                 <h1 style="color:#60a5fa;">Welcome to Evergreen Lead Gen!</h1>
                 <p>Thank you for your purchase. Here is everything you need:</p>
                 <p><strong>Access Key:</strong> <code style="background:#1e293b;padding:4px 8px;border-radius:4px;">{access_key}</code></p>
-                <p><a href="{generate_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Click here to generate your leads now</a></p>
-                <p style="margin-top:25px;"><a href="{base_url}" style="color:#60a5fa;font-weight:bold;">Run a new search anytime →</a></p>
+                <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to your dashboard & run searches</a></p>
                 <hr style="border-color:#334155;margin:30px 0;">
                 <p style="color:#94a3b8;font-size:14px;">
                     Humans: You now have lifetime access.<br>
@@ -145,17 +144,60 @@ async def success(session_id: str = None):
         <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
         <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
         <p>Your access key: <strong>{access_key}</strong></p>
-        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt + direct link.</p>
-        
+        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt.</p>
         <p style="margin:40px 0;">
-            <a href="{generate_link}" style="background:#3b82f6;color:white;padding:18px 36px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:19px;">Generate My Leads Now</a>
+            <a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:18px 36px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:19px;">Go to My Dashboard → Run Searches</a>
         </p>
-        
-        <p><a href="{base_url}" style="color:#60a5fa;">Or return to homepage</a></p>
         </body></html>
         """)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/dashboard")
+async def dashboard(key: str = Query(None)):
+    if not key:
+        return HTMLResponse("<h1>Missing access key</h1>")
+    
+    # Validate key
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT active, expiry_date FROM users WHERE access_key = %s", (key,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not result or not result[0] or (result[1] and result[1] < datetime.now()):
+            return HTMLResponse("<h1>Invalid or expired key</h1>")
+    except:
+        return HTMLResponse("<h1>Error</h1>")
+
+    base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
+    
+    html = f"""
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<title>My Dashboard - Evergreen Lead Gen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body {{ font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }}</style>
+</head>
+<body class="min-h-screen text-white p-8">
+<div class="max-w-2xl mx-auto bg-slate-900/70 backdrop-blur rounded-3xl p-10">
+<h1 class="text-4xl font-bold gradient-text text-center mb-6">My Dashboard</h1>
+<p class="text-center text-gray-400 mb-8">Welcome back! Run as many searches as you want.</p>
+<form action="/generate?key={key}" method="get" class="space-y-6">
+<input name="industry" type="text" placeholder="Enter new niche (e.g. SaaS companies in Austin)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
+<button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Generate 50 Leads Now</button>
+</form>
+<p class="text-center mt-8 text-sm text-gray-400">Your access key: {key}</p>
+</div>
+</body>
+</html>
+    """
+    return HTMLResponse(content=html)
+
+# (The rest of the file — /agent-pay, /generate with beautiful leads page, /health — stays exactly the same as your last working version. I kept it short here to avoid repetition, but you can keep your previous /generate block exactly as it was.)
 
 @app.get("/agent-pay")
 async def agent_pay():
@@ -221,13 +263,11 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
 <pre class="text-sm text-gray-300 whitespace-pre-wrap">{leads}</pre>
 </div>
 <div class="flex gap-4 justify-center">
-<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" 
-class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
-<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" 
-class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
+<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
+<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
 </div>
 <p class="text-center mt-12 text-sm text-gray-400">
-    <a href="{base_url}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>
+    <a href="{base_url}/dashboard?key={key}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>
 </p>
 </div>
 </body>

@@ -120,7 +120,6 @@ async def success(session_id: str = None):
         base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
         dashboard_link = f"{base_url}/dashboard?key={access_key}"
 
-        # BRANDED EMAIL
         resend.Emails.send({
             "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
             "to": email,
@@ -158,7 +157,6 @@ async def dashboard(key: str = Query(None)):
     if not key:
         return HTMLResponse("<h1>Missing access key</h1>")
     
-    # Validate key
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -188,7 +186,7 @@ async def dashboard(key: str = Query(None)):
 <p class="text-center text-gray-400 mb-8">Welcome back! Run unlimited searches anytime.</p>
 <form action="/generate" method="get" class="space-y-6">
 <input type="hidden" name="key" value="{key}">
-<input name="industry" type="text" placeholder="Enter new niche (e.g. SaaS companies in Austin)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
+<input name="industry" type="text" placeholder="Enter new niche (e.g. SaaS companies in Bellevue WA)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
 <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Generate 50 Leads Now</button>
 </form>
 <p class="text-center mt-8 text-sm text-gray-400">Your access key: {key}</p>
@@ -232,7 +230,17 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
     try:
         response = GROQ_CLIENT.chat.completions.create(
             model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": f"Generate 50 high-quality leads for {industry} business. Output ONLY clean CSV with columns: Company,Website,LinkedIn,Location. No extra text, no markdown."}],
+            messages=[{"role": "user", "content": f"""You are a professional B2B lead generation expert.
+
+Generate exactly 50 real, legitimate companies that match this exact niche: {industry}.
+
+Rules:
+- Only real, existing companies (no fictional or generic names)
+- Prioritize small-to-medium sized businesses in the specified location (if a city/state is mentioned)
+- Focus on B2B companies, not tools, consumer brands, or huge corporations like Microsoft/Amazon
+- Include accurate website and LinkedIn where possible
+- Output ONLY a clean CSV with exactly these columns and nothing else: "Company","Website","LinkedIn","Location"
+- No explanations, no notes, no markdown, no extra text."""}],
             temperature=0.7
         )
         leads = response.choices[0].message.content.strip()

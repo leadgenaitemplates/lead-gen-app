@@ -120,7 +120,7 @@ async def success(session_id: str = None):
         base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
         generate_link = f"{base_url}/generate?key={access_key}&industry={urllib.parse.quote(industry)}"
 
-        # BRANDED EMAIL FROM YOUR VERIFIED DOMAIN
+        # BRANDED EMAIL (clean)
         resend.Emails.send({
             "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
             "to": email,
@@ -147,11 +147,11 @@ async def success(session_id: str = None):
         <p>Your access key: <strong>{access_key}</strong></p>
         <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt + direct link.</p>
         
-        <p style="margin:30px 0;">
-            <a href="{generate_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:18px;">Run New Search Now</a>
+        <p style="margin:40px 0;">
+            <a href="{generate_link}" style="background:#3b82f6;color:white;padding:18px 36px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:19px;">Generate My Leads Now</a>
         </p>
         
-        <p style="margin-top:20px;"><a href="{base_url}" style="color:#60a5fa;">Or return to homepage to run even more searches</a></p>
+        <p><a href="{base_url}" style="color:#60a5fa;">Or return to homepage</a></p>
         </body></html>
         """)
     except Exception as e:
@@ -221,11 +221,13 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
 <pre class="text-sm text-gray-300 whitespace-pre-wrap">{leads}</pre>
 </div>
 <div class="flex gap-4 justify-center">
-<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
-<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
+<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" 
+class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
+<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" 
+class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
 </div>
-<p class="text-center mt-8 text-sm text-gray-400">
-    <a href="{base_url}" style="color:#60a5fa;">Run a new search anytime →</a>
+<p class="text-center mt-12 text-sm text-gray-400">
+    <a href="{base_url}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>
 </p>
 </div>
 </body>

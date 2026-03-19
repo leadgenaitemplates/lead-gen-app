@@ -269,9 +269,14 @@ Rules:
 <div class="bg-slate-800 p-6 rounded-2xl overflow-auto max-h-[500px] mb-8">
 <pre class="text-sm text-gray-300 whitespace-pre-wrap">{leads}</pre>
 </div>
+
+<!-- Hidden textarea for reliable copying -->
+<textarea id="csvData" style="display:none;">{leads}</textarea>
+
 <div class="flex gap-4 justify-center">
 <a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
-<button onclick="navigator.clipboard.writeText(`{leads.replace('`','\\`')}`);alert('Copied to clipboard!')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy to Clipboard</button>
+<button onclick="navigator.clipboard.writeText(document.getElementById('csvData').value);alert('✅ Raw CSV copied to clipboard!')" 
+class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy Raw CSV to Clipboard</button>
 </div>
 <p class="text-center mt-12 text-sm text-gray-400">
     <a href="{base_url}/dashboard?key={key}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>

@@ -186,33 +186,37 @@ async def subscription_success(key: str = Query(None)):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        cur.execute("SELECT email FROM users WHERE access_key = %s", (key,))
+        result = cur.fetchone()
+        email = result[0] if result else None
         cur.execute("UPDATE users SET payment_type = 'subscription', amount_paid = 19.00 WHERE access_key = %s", (key,))
         conn.commit()
         cur.close()
         conn.close()
     except:
-        pass
+        email = None
 
     base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
     dashboard_link = f"{base_url}/dashboard?key={key}"
 
-    resend.Emails.send({
-        "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
-        "to": "your.email@example.com",  # In production, pull from DB or pass email
-        "subject": "✅ $19/mo Subscription Activated – Weekly Auto-Updates Live!",
-        "html": f"""
-        <div style="font-family:Inter,sans-serif;background:#0f172a;color:white;padding:40px;border-radius:16px;max-width:600px;margin:auto;">
-            <h1 style="color:#10b981;">Weekly Auto-Updates Activated!</h1>
-            <p>Your $19/mo subscription is now live. Every Sunday your leads will auto-refresh with the latest trends.</p>
-            <p><a href="{dashboard_link}" style="background:#10b981;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to Dashboard</a></p>
-        </div>
-        """
-    })
+    if email:
+        resend.Emails.send({
+            "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
+            "to": email,
+            "subject": "✅ $19/mo Subscription Activated – Weekly Auto-Updates Live!",
+            "html": """
+            <div style="font-family:Inter,sans-serif;background:#0f172a;color:white;padding:40px;border-radius:16px;max-width:600px;margin:auto;">
+                <h1 style="color:#10b981;">$19/mo Subscription Activated!</h1>
+                <p>Weekly auto-updates are now live. The agent refreshes its logic/prompt/data sources every Sunday so the leads stay current with the latest trends, Google changes, or new enrichment methods.</p>
+                <p><a href=""" + dashboard_link + """ style="background:#10b981;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to Dashboard</a></p>
+            </div>
+            """
+        })
 
     return HTMLResponse(f"""
     <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
     <h1>✅ $19/mo Subscription Activated!</h1>
-    <p>Weekly auto-updates are now live. You will receive updated leads every Sunday.</p>
+    <p>Weekly auto-updates are now live. The agent refreshes its logic/prompt/data sources every Sunday so the leads stay current with the latest trends, Google changes, or new enrichment methods.</p>
     <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;">Go to My Dashboard</a></p>
     </body></html>
     """)

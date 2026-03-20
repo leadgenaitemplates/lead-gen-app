@@ -15,6 +15,7 @@ GROQ_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 resend.api_key = os.getenv("RESEND_API_KEY")
 
+# YOUR x402 ADDRESSES (Master Plan baseline)
 PAY_TO_XRPL = "twJqGeY3wfmMYm9gBfNVqn3T6nuxrpwGv2"
 PAY_TO_XRPL_TAG = 1986572456
 PAY_TO_SOLANA = "APwNRVQsiWE9L2KDJDdpuEbtqoVCvZ43BAw2AzQWNz8A"
@@ -130,7 +131,7 @@ async def success(session_id: str = None):
                 <h1 style="color:#60a5fa;">Welcome to Evergreen Lead Gen!</h1>
                 <p>Thank you for your $149 purchase. Here is everything you need:</p>
                 <p><strong>Access Key:</strong> <code style="background:#1e293b;padding:4px 8px;border-radius:4px;">{access_key}</code></p>
-                <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to your dashboard</a></p>
+                <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to your dashboard & run searches</a></p>
                 <p style="margin-top:25px;"><a href="{subscription_link}" style="background:#10b981;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Upgrade to $19/mo Weekly Auto-Updates (Stripe)</a></p>
             </div>
             """
@@ -140,7 +141,7 @@ async def success(session_id: str = None):
         <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
         <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
         <p>Your access key: <strong>{access_key}</strong></p>
-        <p>Check your email for the receipt.</p>
+        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt.</p>
         
         <p style="margin:40px 0;">
             <a href="{subscription_link}" style="background:#10b981;color:white;padding:20px 40px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:20px;">Upgrade to $19/mo Weekly Auto-Updates (Stripe)</a>

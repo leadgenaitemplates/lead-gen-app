@@ -53,21 +53,261 @@ async def startup_event():
     except Exception as e:
         print(f"DB startup error: {e}")
 
-# NEW: Weekly auto-update job (runs every Sunday)
-@app.get("/weekly-update")
-async def weekly_update():
+@app.get("/")
+async def home():
+    html = """
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evergreen Lead Gen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' }</script>
+<style>body { font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }</style>
+</head>
+<body class="min-h-screen text-white p-8">
+<div class="max-w-md mx-auto bg-slate-900/70 backdrop-blur rounded-3xl p-10">
+<h1 class="text-5xl font-bold text-center gradient-text mb-6">Evergreen Lead Gen</h1>
+<p class="text-center text-gray-300 mb-8">Self-updating agents for Apollo, Lusha, ZoomInfo & more.</p>
+<form action="/create-checkout" method="post" class="space-y-6">
+<input name="email" type="email" placeholder="Your email" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl">
+<input name="industry" type="text" placeholder="Your niche (e.g. Plumbing companies Seattle WA)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl">
+<button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Pay $149 with Stripe & Get Access</button>
+</form>
+<p class="text-center mt-8 text-sm text-gray-400">Humans: Stripe above • Agents: x402 → <a href="/agent-pay" class="text-indigo-400">see details</a></p>
+</div>
+</body>
+</html>
+    """
+    return HTMLResponse(content=html)
+
+@app.post("/create-checkout")
+async def create_checkout(email: str = Form(...), industry: str = Form(...)):
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("UPDATE users SET expiry_date = NULL WHERE payment_type = 'subscription'")
-        conn.commit()
-        cur.close()
-        conn.close()
-        return {"status": "weekly updates applied to all subscribers"}
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{'price_data': {'currency': 'usd', 'product_data': {'name': 'Evergreen Lead Gen Lifetime Access'}, 'unit_amount': 14900}, 'quantity': 1}],
+            mode='payment',
+            success_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app'),
+            customer_email=email,
+            metadata={"industry": industry}
+        )
+        return RedirectResponse(url=checkout_session.url, status_code=303)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-# (The rest of the file — home, create-checkout, success, create-subscription, dashboard, generate, agent-pay, health — is the same as the last version you tested. Keep your existing blocks for those.)
+@app.get("/success")
+async def success(session_id: str = None):
+    if not session_id: return HTMLResponse("<h1>Error</h1>")
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.payment_status != "paid": return HTMLResponse("<h1>Payment not completed</h1>")
+        
+        email = session.customer_email
+        industry = session.metadata.get("industry", "your niche")
+        access_key = str(uuid.uuid4())
+        
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("INSERT INTO users (email, access_key, payment_type, amount_paid, paid_at, expiry_date) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (email, access_key, "one_time", 149.00, datetime.now(), None))
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
+        dashboard_link = f"{base_url}/dashboard?key={access_key}"
+        subscription_link = f"{base_url}/create-subscription?key={access_key}"
+
+        resend.Emails.send({
+            "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
+            "to": email,
+            "subject": f"✅ Your Evergreen Lead Gen Access Key + Leads Ready",
+            "html": f"""
+            <div style="font-family:Inter,sans-serif;background:#0f172a;color:white;padding:40px;border-radius:16px;max-width:600px;margin:auto;">
+                <h1 style="color:#60a5fa;">Welcome to Evergreen Lead Gen!</h1>
+                <p>Thank you for your $149 purchase. Here is everything you need:</p>
+                <p><strong>Access Key:</strong> <code style="background:#1e293b;padding:4px 8px;border-radius:4px;">{access_key}</code></p>
+                <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to your dashboard</a></p>
+                <p style="margin-top:25px;"><a href="{subscription_link}" style="background:#10b981;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Upgrade to $19/mo Weekly Auto-Updates (Stripe)</a></p>
+            </div>
+            """
+        })
+
+        return HTMLResponse(f"""
+        <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
+        <h1>✅ Payment Successful! Welcome to Evergreen Lead Gen 🎉</h1>
+        <p>Your access key: <strong>{access_key}</strong></p>
+        <p>Check your email (from noreply@updates.evergreenleadgen.ai) for the receipt.</p>
+        
+        <p style="margin:40px 0;">
+            <a href="{subscription_link}" style="background:#10b981;color:white;padding:20px 40px;border-radius:12px;text-decoration:none;font-weight:bold;font-size:20px;">Upgrade to $19/mo Weekly Auto-Updates (Stripe)</a>
+        </p>
+        
+        <p style="margin-top:20px;">
+            <a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;">Or go to My Dashboard → Run Unlimited Searches</a>
+        </p>
+        </body></html>
+        """)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/create-subscription")
+async def create_subscription(key: str = Query(None)):
+    if not key:
+        return HTMLResponse("<h1>Missing access key</h1>")
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {'name': 'Evergreen Lead Gen Weekly Auto-Updates'},
+                    'unit_amount': 1900,
+                    'recurring': {'interval': 'month'}
+                },
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/dashboard?key={key}",
+            cancel_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/success",
+            metadata={"key": key}
+        )
+        return RedirectResponse(url=checkout_session.url, status_code=303)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/dashboard")
+async def dashboard(key: str = Query(None)):
+    if not key:
+        return HTMLResponse("<h1>Missing access key</h1>")
+    
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT active, expiry_date FROM users WHERE access_key = %s", (key,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not result or not result[0] or (result[1] and result[1] < datetime.now()):
+            return HTMLResponse("<h1>Invalid or expired key</h1>")
+    except:
+        return HTMLResponse("<h1>Error</h1>")
+
+    base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
+    
+    html = f"""
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<title>My Dashboard - Evergreen Lead Gen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body {{ font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }}</style>
+</head>
+<body class="min-h-screen text-white p-8">
+<div class="max-w-2xl mx-auto bg-slate-900/70 backdrop-blur rounded-3xl p-10">
+<h1 class="text-4xl font-bold gradient-text text-center mb-6">My Dashboard</h1>
+<p class="text-center text-gray-400 mb-8">Welcome back! Run unlimited searches anytime.</p>
+<form action="/generate" method="get" class="space-y-6">
+<input type="hidden" name="key" value="{key}">
+<input name="industry" type="text" placeholder="Enter new niche (e.g. carwash bellevue wa)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
+<button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Generate 50 Leads Now</button>
+</form>
+<p class="text-center mt-8 text-sm text-gray-400">Your access key: {key}</p>
+</div>
+</body>
+</html>
+    """
+    return HTMLResponse(content=html)
+
+@app.get("/agent-pay")
+async def agent_pay():
+    return JSONResponse(content={
+        "message": "Agents: Use x402 autonomous payments (RLUSD/XRP or USDC/SOL). Send $149 one-time or $19 monthly, then retry with X-Payment-Proof header.",
+        "xrpl_address": PAY_TO_XRPL, "xrpl_tag": PAY_TO_XRPL_TAG,
+        "solana_address": PAY_TO_SOLANA,
+        "rlusd_address": PAY_TO_RLUSD, "rlusd_tag": PAY_TO_RLUSD_TAG,
+        "usdc_sol_address": PAY_TO_USDC_SOL,
+        "note": "Built for autonomous agents — perfect for the agentic AI economy."
+    })
+
+@app.get("/generate")
+async def generate(request: Request, industry: str = Query(None), key: str = Query(None), format: str = Query(None)):
+    if not key:
+        return JSONResponse(status_code=401, content={"error": "Access key required. Use ?key=YOUR_KEY"})
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT active, expiry_date FROM users WHERE access_key = %s", (key,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        if not result or not result[0] or (result[1] and result[1] < datetime.now()):
+            return JSONResponse(status_code=403, content={"error": "Invalid or expired key"})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+    if not industry:
+        return JSONResponse(status_code=400, content={"error": "Add &industry=Your Niche to the URL"})
+
+    try:
+        response = GROQ_CLIENT.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=[{"role": "user", "content": f"""You are a professional B2B lead generation expert.
+
+Generate exactly 50 real, legitimate companies that match this exact niche: {industry}.
+
+STRICT RULES:
+- ONLY return companies in the EXACT location mentioned in the niche (e.g. if it says "Bellevue WA", do NOT include Seattle, Kirkland, Redmond, Tukwila, or any other city).
+- If the niche specifies a city, stay 100% within that city only.
+- Only real, existing businesses (no fictional names).
+- Output ONLY a clean CSV with exactly these columns and nothing else: "Company","Website","LinkedIn","Location"
+- No explanations, no notes, no markdown, no extra text at all."""}],
+            temperature=0.7
+        )
+        leads = response.choices[0].message.content.strip()
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+    if format == "json":
+        return {"status": "success", "leads": leads, "note": "Weekly self-update runs Sundays"}
+
+    base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
+    encoded_csv = urllib.parse.quote(leads)
+    download_link = f"data:text/csv;charset=utf-8,{encoded_csv}"
+
+    html = f"""
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<title>Your Leads - Evergreen Lead Gen</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body {{ font-family: 'Inter', sans-serif; background: linear-gradient(to bottom right, #0f172a, #1e293b); }}</style>
+</head>
+<body class="min-h-screen text-white p-8">
+<div class="max-w-5xl mx-auto bg-slate-900/70 backdrop-blur rounded-3xl p-10">
+<h1 class="text-4xl font-bold gradient-text text-center mb-8">Your 50 Leads for {industry}</h1>
+<div class="bg-slate-800 p-6 rounded-2xl overflow-auto max-h-[500px] mb-8">
+<pre class="text-sm text-gray-300 whitespace-pre-wrap">{leads}</pre>
+</div>
+<textarea id="csvData" style="display:none;">{leads}</textarea>
+<div class="flex gap-4 justify-center">
+<a href="{download_link}" download="leads-{industry.replace(' ', '-')}.csv" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📥 Download CSV File</a>
+<button onclick="navigator.clipboard.writeText(document.getElementById('csvData').value);alert('✅ Raw CSV copied to clipboard!')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 px-10 rounded-2xl transition text-lg">📋 Copy Raw CSV to Clipboard</button>
+</div>
+<p class="text-center mt-12 text-sm text-gray-400">
+    <a href="{base_url}/dashboard?key={key}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>
+</p>
+</div>
+</body>
+</html>
+    """
+    return HTMLResponse(content=html)
 
 @app.get("/health")
 async def health():

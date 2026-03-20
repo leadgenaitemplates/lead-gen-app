@@ -121,7 +121,6 @@ async def success(session_id: str = None):
         dashboard_link = f"{base_url}/dashboard?key={access_key}"
         subscription_link = f"{base_url}/create-subscription?key={access_key}"
 
-        # BRANDED EMAIL
         resend.Emails.send({
             "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
             "to": email,
@@ -214,7 +213,7 @@ async def dashboard(key: str = Query(None)):
 <p class="text-center text-gray-400 mb-8">Welcome back! Run unlimited searches anytime.</p>
 <form action="/generate" method="get" class="space-y-6">
 <input type="hidden" name="key" value="{key}">
-<input name="industry" type="text" placeholder="Enter new niche (e.g. SaaS companies in Bellevue WA)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
+<input name="industry" type="text" placeholder="Enter new niche (e.g. carwash bellevue wa)" required class="w-full px-5 py-4 bg-gray-800 rounded-2xl text-white">
 <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Generate 50 Leads Now</button>
 </form>
 <p class="text-center mt-8 text-sm text-gray-400">Your access key: {key}</p>
@@ -262,12 +261,12 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
 
 Generate exactly 50 real, legitimate companies that match this exact niche: {industry}.
 
-Rules:
-- Only real, existing companies (no fictional or generic names)
-- Prioritize small-to-medium sized businesses in the specified location
-- Focus on B2B companies
+STRICT RULES:
+- ONLY return companies in the EXACT location mentioned in the niche (e.g. if it says "Bellevue WA", do NOT include Seattle, Kirkland, Redmond, Tukwila, or any other city).
+- If the niche specifies a city, stay 100% within that city only.
+- Only real, existing businesses (no fictional names).
 - Output ONLY a clean CSV with exactly these columns and nothing else: "Company","Website","LinkedIn","Location"
-- No explanations, no notes, no markdown, no extra text."""}],
+- No explanations, no notes, no markdown, no extra text at all."""}],
             temperature=0.7
         )
         leads = response.choices[0].message.content.strip()

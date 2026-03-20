@@ -171,13 +171,51 @@ async def create_subscription(key: str = Query(None)):
                 'quantity': 1,
             }],
             mode='subscription',
-            success_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/dashboard?key={key}",
+            success_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/subscription-success?key={key}",
             cancel_url=f"{os.getenv('BASE_URL', 'https://lead-gen-app-production-d067.up.railway.app')}/success",
             metadata={"key": key}
         )
         return RedirectResponse(url=checkout_session.url, status_code=303)
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+@app.get("/subscription-success")
+async def subscription_success(key: str = Query(None)):
+    if not key:
+        return HTMLResponse("<h1>Missing access key</h1>")
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("UPDATE users SET payment_type = 'subscription', amount_paid = 19.00 WHERE access_key = %s", (key,))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except:
+        pass
+
+    base_url = os.getenv("BASE_URL") or "https://lead-gen-app-production-d067.up.railway.app"
+    dashboard_link = f"{base_url}/dashboard?key={key}"
+
+    resend.Emails.send({
+        "from": "Evergreen Lead Gen <noreply@updates.evergreenleadgen.ai>",
+        "to": "your.email@example.com",  # In production, pull from DB or pass email
+        "subject": "✅ $19/mo Subscription Activated – Weekly Auto-Updates Live!",
+        "html": f"""
+        <div style="font-family:Inter,sans-serif;background:#0f172a;color:white;padding:40px;border-radius:16px;max-width:600px;margin:auto;">
+            <h1 style="color:#10b981;">Weekly Auto-Updates Activated!</h1>
+            <p>Your $19/mo subscription is now live. Every Sunday your leads will auto-refresh with the latest trends.</p>
+            <p><a href="{dashboard_link}" style="background:#10b981;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;">Go to Dashboard</a></p>
+        </div>
+        """
+    })
+
+    return HTMLResponse(f"""
+    <!DOCTYPE html><html><body style="font-family:Arial;text-align:center;padding:50px;background:#0f172a;color:white;">
+    <h1>✅ $19/mo Subscription Activated!</h1>
+    <p>Weekly auto-updates are now live. You will receive updated leads every Sunday.</p>
+    <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;">Go to My Dashboard</a></p>
+    </body></html>
+    """)
 
 @app.get("/dashboard")
 async def dashboard(key: str = Query(None)):
@@ -187,7 +225,7 @@ async def dashboard(key: str = Query(None)):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("SELECT active, expiry_date FROM users WHERE access_key = %s", (key,))
+        cur.execute("SELECT active, expiry_date, payment_type FROM users WHERE access_key = %s", (key,))
         result = cur.fetchone()
         cur.close()
         conn.close()

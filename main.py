@@ -94,9 +94,16 @@ async def home():
 <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-semibold py-4 rounded-2xl">Pay $149 with Stripe & Get Access</button>
 </form>
 
-<!-- QUICK DEMO VIDEO EMBEDDED ONLY ON HOME PAGE -->
+<!-- QUICK DEMO VIDEO -->
 <h3 class="text-center text-xl font-semibold mt-10 mb-4">See it in action (35 seconds)</h3>
 <iframe src="https://www.loom.com/embed/5d782c23a19e4e7a915088bd0e9338d0" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="width:100%; height:400px; border-radius:16px;"></iframe>
+
+<!-- AI AGENTS DIRECTORY BADGE -->
+<div class="text-center mt-8">
+    <a href="https://aiagentsdirectory.com/agent/evergreen-lead-gen?utm_source=badge&utm_medium=referral&utm_campaign=free_listing&utm_content=evergreen-lead-gen" target="_blank" rel="noopener noreferrer">
+      <img src="https://aiagentsdirectory.com/featured-badge.svg?v=2024" alt="Evergreen Lead Gen - Featured AI Agent on AI Agents Directory" width="200" height="50" />
+    </a>
+</div>
 
 <p class="text-center mt-8 text-sm text-gray-400">Humans: Stripe above • Agents: x402 → <a href="/agent-pay" class="text-indigo-400">see details</a></p>
 </div>

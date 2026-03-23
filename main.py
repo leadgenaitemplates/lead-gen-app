@@ -24,13 +24,21 @@ PAY_TO_RLUSD_TAG = 142654817
 PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4KxkH6vHzoBJw5"
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
-# BRANDED HEADER WITH BACK LINK (on EVERY page)
+# BRANDED HEADER + FOOTER
 def header_html():
     return '''
     <div style="position:fixed;top:0;left:0;right:0;background:#0f172a;border-bottom:1px solid #334155;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;z-index:50;">
         <a href="https://evergreenleadgen.ai" style="color:#60a5fa;font-weight:600;text-decoration:none;font-size:15px;">← Back to evergreenleadgen.ai</a>
     </div>
     <div style="height:60px;"></div>
+    '''
+
+def footer_html():
+    return '''
+    <div style="text-align:center;padding:30px 0;color:#64748b;font-size:13px;border-top:1px solid #334155;margin-top:40px;">
+        <a href="https://evergreenleadgen.ai/privacy-policy" style="color:#64748b;margin:0 15px;">Privacy Policy</a>
+        <a href="https://evergreenleadgen.ai/terms-of-service" style="color:#64748b;margin:0 15px;">Terms of Service</a>
+    </div>
     '''
 
 def get_db_connection():
@@ -87,6 +95,7 @@ async def home():
 </form>
 <p class="text-center mt-8 text-sm text-gray-400">Humans: Stripe above • Agents: x402 → <a href="/agent-pay" class="text-indigo-400">see details</a></p>
 </div>
+{footer_html()}
 </body>
 </html>
     """
@@ -160,6 +169,7 @@ async def success(session_id: str = None):
         <p style="margin-top:20px;">
             <a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;">Or go to My Dashboard → Run Unlimited Searches</a>
         </p>
+        {footer_html()}
         </body></html>
         """)
     except Exception as e:
@@ -230,6 +240,7 @@ async def subscription_success(key: str = Query(None)):
     <h1>✅ $19/mo Subscription Activated!</h1>
     <p>Weekly auto-updates are now live. The agent refreshes its logic/prompt/data sources every Sunday so the leads stay current with the latest trends, Google changes, or new enrichment methods.</p>
     <p><a href="{dashboard_link}" style="background:#3b82f6;color:white;padding:16px 32px;border-radius:12px;text-decoration:none;">Go to My Dashboard</a></p>
+    {footer_html()}
     </body></html>
     """)
 
@@ -273,6 +284,7 @@ async def dashboard(key: str = Query(None)):
 </form>
 <p class="text-center mt-8 text-sm text-gray-400">Your access key: {key}</p>
 </div>
+{footer_html()}
 </body>
 </html>
     """
@@ -359,6 +371,7 @@ STRICT RULES:
 <p class="text-center mt-12 text-sm text-gray-400">
     <a href="{base_url}/dashboard?key={key}" style="color:#60a5fa;font-weight:bold;">Run New Search →</a>
 </p>
+{footer_html()}
 </div>
 </body>
 </html>

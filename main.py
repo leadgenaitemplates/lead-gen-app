@@ -24,6 +24,32 @@ PAY_TO_RLUSD_TAG = 142654817
 PAY_TO_USDC_SOL = "J6MrNdBPe8WrTNh19hX51PQfGS3BQi4KxkH6vHzoBJw5"
 DEFAULT_MODEL = "llama-3.1-8b-instant"
 
+DEFAULT_LEAD_PROMPT = """You are a professional B2B lead generation expert using the latest Google trends and lead gen best practices.
+
+Generate exactly 50 real, legitimate companies that match this exact niche: {industry}.
+
+STRICT RULES:
+- ONLY return companies in the EXACT location mentioned in the niche (e.g. if it says "Bellevue WA", do NOT include Seattle, Kirkland, Redmond, Tukwila, or any other city).
+- If the niche specifies a city, stay 100% within that city only.
+- Only real, existing businesses (no fictional names).
+- Output ONLY a clean CSV with exactly these columns and nothing else: "Company","Website","LinkedIn","Location"
+- No explanations, no notes, no markdown, no extra text at all."""
+
+def get_active_prompt(industry: str) -> str:
+    """Fetch the current prompt from DB, fall back to default if unavailable."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT prompt FROM prompt_config ORDER BY updated_at DESC LIMIT 1")
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+        if result:
+            return result[0].replace("{industry}", industry)
+    except Exception as e:
+        print(f"Failed to fetch prompt from DB: {e}")
+    return DEFAULT_LEAD_PROMPT.replace("{industry}", industry)
+
 # BRANDED HEADER + FOOTER
 def header_html():
     return '''
@@ -65,6 +91,22 @@ async def startup_event():
         for col in ["access_key TEXT UNIQUE", "expiry_date TIMESTAMP", "active BOOLEAN DEFAULT TRUE", "last_industry TEXT"]:
             try: cur.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col}")
             except: pass
+
+        # Prompt config table — stores the current active lead gen prompt
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS prompt_config (
+                id SERIAL PRIMARY KEY,
+                prompt TEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        # Seed default prompt if none exists
+        cur.execute("SELECT COUNT(*) FROM prompt_config")
+        if cur.fetchone()[0] == 0:
+            cur.execute("""
+                INSERT INTO prompt_config (prompt) VALUES (%s)
+            """, (DEFAULT_LEAD_PROMPT,))
+
         conn.commit()
         cur.close()
         conn.close()
@@ -347,18 +389,10 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
             print(f"Failed to save last_industry: {e}")
 
     try:
+        active_prompt = get_active_prompt(industry)
         response = GROQ_CLIENT.chat.completions.create(
             model=DEFAULT_MODEL,
-            messages=[{"role": "user", "content": f"""You are a professional B2B lead generation expert.
-
-Generate exactly 50 real, legitimate companies that match this exact niche: {industry}.
-
-STRICT RULES:
-- ONLY return companies in the EXACT location mentioned in the niche (e.g. if it says "Bellevue WA", do NOT include Seattle, Kirkland, Redmond, Tukwila, or any other city).
-- If the niche specifies a city, stay 100% within that city only.
-- Only real, existing businesses (no fictional names).
-- Output ONLY a clean CSV with exactly these columns and nothing else: "Company","Website","LinkedIn","Location"
-- No explanations, no notes, no markdown, no extra text at all."""}],
+            messages=[{"role": "user", "content": active_prompt}],
             temperature=0.7
         )
         leads = response.choices[0].message.content.strip()

@@ -58,10 +58,11 @@ async def startup_event():
                 amount_paid DECIMAL,
                 paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 expiry_date TIMESTAMP,
-                active BOOLEAN DEFAULT TRUE
+                active BOOLEAN DEFAULT TRUE,
+                last_industry TEXT
             )
         """)
-        for col in ["access_key TEXT UNIQUE", "expiry_date TIMESTAMP", "active BOOLEAN DEFAULT TRUE"]:
+        for col in ["access_key TEXT UNIQUE", "expiry_date TIMESTAMP", "active BOOLEAN DEFAULT TRUE", "last_industry TEXT"]:
             try: cur.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col}")
             except: pass
         conn.commit()
@@ -332,6 +333,18 @@ async def generate(request: Request, industry: str = Query(None), key: str = Que
 
     if not industry:
         return JSONResponse(status_code=400, content={"error": "Add &industry=Your Niche to the URL"})
+
+    # Save last industry for subscription auto-updates
+    if industry:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("UPDATE users SET last_industry = %s WHERE access_key = %s", (industry, key))
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"Failed to save last_industry: {e}")
 
     try:
         response = GROQ_CLIENT.chat.completions.create(

@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Copy the x_promotion script
+COPY x_promotion.py .
+
+# Install requests library
+RUN pip install requests --no-cache-dir
+
+# Run the script and exit
+CMD ["python", "x_promotion.py"]

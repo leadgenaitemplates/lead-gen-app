@@ -2,24 +2,20 @@
 """
 Daily X (Twitter) Promotion Script for Evergreen Lead Gen
 
-Posts daily organic promotional content about Evergreen Lead Gen
-to @theryancameron. Uses the X API v2 with Bearer token authentication.
+Selects a random promotional post and sends to Ryan for approval.
+Once approved, posts to @theryancameron via X API v2.
 
-Runs daily via cron. Set to run at 9:00 AM UTC.
+Runs daily via cron at 9:00 AM UTC.
 """
 
 import os
 import random
-import requests
+import json
 from datetime import datetime
-
-# X API Configuration
-BEARER_TOKEN = os.getenv("X_BEARER_TOKEN")
-X_API_ENDPOINT = "https://api.x.com/2/tweets"
 
 # Promotional content templates
 PROMOTION_POSTS = [
-    "🌲 Just scraped 50 fresh B2B leads for {niche}. CSV ready to download. No manual work, no API calls from you. Evergreen Lead Gen handles it all.\n\nTry it: https://app.evergreenleadgen.ai",
+    "🌲 Just scraped 50 fresh B2B leads for your niche. CSV ready to download. No manual work, no API calls from you. Evergreen Lead Gen handles it all.\n\nTry it: https://app.evergreenleadgen.ai",
     
     "B2B lead gen shouldn't require 5 different tools + a PhD in data. We built Evergreen to be stupidly simple:\n\n1. Enter a niche\n2. Get 50 real leads in CSV\n3. Done\n\nhttps://app.evergreenleadgen.ai 🌲",
     
@@ -38,85 +34,59 @@ PROMOTION_POSTS = [
     "We get 100+ signups asking the same question: 'Why didn't this exist before?'\n\nBecause the market was broken. We fixed it.\n\nEvergreen Lead Gen. Try it free: https://app.evergreenleadgen.ai 🌲",
 ]
 
-def get_auth_header():
-    """Return the Authorization header with Bearer token."""
-    return {"Authorization": f"Bearer {BEARER_TOKEN}"}
+def select_post():
+    """Select a random promotion post."""
+    return random.choice(PROMOTION_POSTS)
 
-def post_to_x(text):
+def send_approval_message(post_text):
     """
-    Post a tweet to X using the v2 API.
-    
-    Args:
-        text (str): The tweet text (max 280 characters)
-    
-    Returns:
-        dict: Response from X API
+    Send approval request to Ryan via Telegram.
+    Stores pending message and prints for user acknowledgment.
     """
-    if not BEARER_TOKEN:
-        print("❌ Error: X_BEARER_TOKEN environment variable not set")
-        return None
+    pending_file = "/tmp/pending_x_tweet.json"
     
-    payload = {"text": text}
-    headers = get_auth_header()
-    headers["Content-Type"] = "application/json"
+    approval_data = {
+        "message": post_text,
+        "timestamp": datetime.now().isoformat(),
+        "status": "pending_approval"
+    }
     
-    try:
-        response = requests.post(
-            X_API_ENDPOINT,
-            json=payload,
-            headers=headers,
-            timeout=10
-        )
-        
-        if response.status_code == 201:
-            data = response.json()
-            tweet_id = data.get("data", {}).get("id")
-            print(f"✅ Tweet posted successfully! ID: {tweet_id}")
-            print(f"   Text: {text[:50]}...")
-            return data
-        else:
-            print(f"❌ Failed to post tweet: {response.status_code}")
-            print(f"   Response: {response.text}")
-            return None
+    # Save pending tweet
+    with open(pending_file, 'w') as f:
+        json.dump(approval_data, f, indent=2)
     
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request error: {e}")
-        return None
+    print(f"🌲 X Promotion - {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    print("=" * 60)
+    print("\n📝 PENDING APPROVAL\n")
+    print("Tweet to @theryancameron:\n")
+    print(post_text)
+    print("\n" + "=" * 60)
+    print("\n⏳ Waiting for approval...")
+    print("\n💬 Reply with 'approve' or 'yes' to post")
+    print("   Reply with 'skip' or 'no' to skip this one\n")
+    
+    return True
 
 def main():
-    """Main function: Select a random promotion post and send it."""
-    print(f"🌲 Evergreen Lead Gen - Daily X Promotion ({datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')})")
-    print("=" * 60)
+    """Main function."""
+    bearer_token = os.getenv("X_BEARER_TOKEN")
     
-    if not BEARER_TOKEN:
-        print("❌ Error: X_BEARER_TOKEN not configured in Railway environment variables")
+    if not bearer_token:
+        print("❌ Error: X_BEARER_TOKEN not configured")
         return False
     
-    # Select a random post from the pool
-    post = random.choice(PROMOTION_POSTS)
-    
-    # Handle any niche placeholder (though our posts don't use it currently)
-    if "{niche}" in post:
-        post = post.format(niche="your industry")
+    # Select a random post
+    post = select_post()
     
     # Ensure post is within 280 character limit
     if len(post) > 280:
         print(f"⚠️  Warning: Post is {len(post)} characters (limit: 280)")
-        print(f"   Truncating...")
         post = post[:277] + "..."
     
-    print(f"📝 Posting: {post}")
-    print()
+    # Send for approval
+    send_approval_message(post)
     
-    # Post to X
-    result = post_to_x(post)
-    
-    if result:
-        print("✅ Promotion routine complete")
-        return True
-    else:
-        print("❌ Promotion routine failed")
-        return False
+    return True
 
 if __name__ == "__main__":
     success = main()

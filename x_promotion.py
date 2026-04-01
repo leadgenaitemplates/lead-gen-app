@@ -13,25 +13,25 @@ import random
 import json
 from datetime import datetime
 
-# Promotional content templates
+# Promotional content templates (CLARIFIED MESSAGING)
 PROMOTION_POSTS = [
-    "🌲 Just scraped 50 fresh B2B leads for your niche. CSV ready to download. No manual work, no API calls from you. Evergreen Lead Gen handles it all.\n\nTry it: https://app.evergreenleadgen.ai",
+    "I used to spend 30 mins in Apollo finding the right niche to prospect. Now I search Evergreen, get 50 companies instantly, upload to Apollo for enrichment. Same leads, 90% less time.\n\n$149 lifetime: https://app.evergreenleadgen.ai 🌲",
     
-    "B2B lead gen shouldn't require 5 different tools + a PhD in data. We built Evergreen to be stupidly simple:\n\n1. Enter a niche\n2. Get 50 real leads in CSV\n3. Done\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "Not replacing Apollo. Evergreen is the search layer Apollo was missing.\n\nFind companies → Apollo enriches with contacts → Cold list in 2 minutes.\n\nhttps://app.evergreenleadgen.ai 🌲",
     
-    "Your sales team is wasting 20 hours/week finding B2B leads manually.\n\nEvergreen Lead Gen does it in 30 seconds. $149 lifetime access. Try it: https://app.evergreenleadgen.ai 🌲",
+    "The hard part of outreach isn't emails (Apollo does that). It's finding the RIGHT niche worth prospecting.\n\nEvergreen solves that. $149 lifetime.\n\nhttps://app.evergreenleadgen.ai 🌲",
     
-    "Sick of lead gen APIs that:\n- Require 10 setups\n- Have confusing rate limits\n- Cost $1000s/month\n\nEvergreen does lead gen right. $149 lifetime. No BS.\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "You already pay for Apollo/Lusha. Don't waste it on bad searches.\n\nEvergreen helps you find the GOOD companies to enrich. Works with whatever enrichment tool you have.\n\nhttps://app.evergreenleadgen.ai 🌲",
     
-    "Your Apollo/ZoomInfo/Clearbit are costing you money. They're tools, not solutions.\n\nEvergreen Lead Gen is the solution. Search any B2B niche, get 50 real leads instantly.\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "Spent $5k on Apollo but couldn't figure out which niches were worth researching. Evergreen would've saved me weeks of wasted searches.\n\n$149 lifetime. https://app.evergreenleadgen.ai 🌲",
     
-    "We analyzed 1000s of B2B lead gen workflows. Found the pattern: people need leads fast, cheap, and actually valid.\n\nThat's Evergreen. $149. No subscriptions. No limits.\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "Algorithm updates every Sunday with latest Google scraping trends + B2B targeting.\n\nFree version works forever. $19/mo for weekly updates.\n\nhttps://app.evergreenleadgen.ai 🌲",
     
-    "We're building the standard lead gen layer for the agentic AI economy.\n\nRight now? We're helping humans find leads in seconds. That's just the start.\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "For Apollo power users: Evergreen just makes you faster. For Apollo strugglers: This is the targeting shortcut I wish I had 2 years ago.\n\n$149 lifetime: https://app.evergreenleadgen.ai 🌲",
     
-    "Why Evergreen?\n\n✅ 50 real B2B leads per search\n✅ Works with Apollo, Lusha, ZoomInfo, Clay, RocketReach, etc.\n✅ $149 lifetime (no recurring BS)\n✅ CSV download in 30 seconds\n\nhttps://app.evergreenleadgen.ai 🌲",
+    "The bottleneck in outreach:\n\n❌ Not emails (Apollo has those)\n✅ Finding companies worth prospecting\n\nEvergreen fixes the real problem. Works with your existing tools.\n\nhttps://app.evergreenleadgen.ai 🌲",
     
-    "We get 100+ signups asking the same question: 'Why didn't this exist before?'\n\nBecause the market was broken. We fixed it.\n\nEvergreen Lead Gen. Try it free: https://app.evergreenleadgen.ai 🌲",
+    "ROI check: Apollo costs $300/mo. Evergreen costs $149 lifetime. If it saves you 2 hours/month in niche research, you've paid for itself forever.\n\nhttps://app.evergreenleadgen.ai 🌲",
 ]
 
 def select_post():
